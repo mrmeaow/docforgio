@@ -31,48 +31,60 @@ export function PreviewPane() {
     ];
     if (pageBackground) bodyStyles.push(`background: ${pageBackground}`);
 
-    if (mode === 'code') {
-      // In Code Mode, also include block styles from current blocks to prevent styles from going black-white
-      const blockStyles = blocks.map(block => {
-        const id = block.id.split('-')[0];
-        const className = `.block-${block.type}-${id}`;
-        const css = blockStyleToCss(block.style);
-        // Use !important to override Tailwind preflight resets
-        return css ? `${className} { ${css} !important; }` : '';
-      }).filter(Boolean).join('\n');
-
-      return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-  @import url('https://cdn.jsdelivr.net/npm/tailwindcss@4/dist/tailwind.css');
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { ${bodyStyles.join('; ')}; padding: 2rem; }
-  ${blockStyles}
-  ${cssSource}
-  ${customCss}
-</style>
-${headSource}
-</head>
-<body>
-${htmlSource || '<p>Start writing in code mode...</p>'}
-</body>
-</html>`;
-    }
-
-    const blocksHtml = blocks.map(blockToHtml).join('\n');
-
-    return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-  @import url('https://cdn.jsdelivr.net/npm/tailwindcss@4/dist/tailwind.css');
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { ${bodyStyles.join('; ')}; }
+    // Page/Print mode specific CSS
+    const pagePrintCss = previewMode !== 'web' ? `
+  /* Page/Print mode specific styles */
+  @page { size: ${pageSize} ${orientation}; margin: 20mm; }
+  body { 
+    ${bodyStyles.join('; ')} !important;
+    padding: 20mm !important;
+    max-width: ${dimensions.width}px !important;
+    margin: 0 auto !important;
+    min-height: auto !important;
+    width: auto !important;
+    transform: none !important;
+  }
   .page-break { page-break-after: always; height: 0; }
-  .cover { text-align: center; padding: 4rem 2rem; }
+  .cover { text-align: center; padding: 4rem 2rem; display: flex; flex-direction: column; justify-content: center; page-break-after: always; }
+  .cover h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .cover p { font-size: 1.125rem; color: #6b7280; margin-top: 0.5rem; }
+  .cover .author, .cover .date { font-size: 0.875rem; color: #9ca3af; }
+  .callout { padding: 1rem; border-radius: 0.5rem; border-left: 4px solid; margin: 0.5rem 0; page-break-inside: avoid; }
+  .callout-info { background: #eff6ff; border-color: #3b82f6; }
+  .callout-warning { background: #fffbeb; border-color: #f59e0b; }
+  .callout-error { background: #fef2f2; border-color: #ef4444; }
+  .callout-success { background: #f0fdf4; border-color: #22c55e; }
+  table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; page-break-inside: avoid; }
+  th, td { border: 1px solid #e5e7eb; padding: 0.5rem 0.75rem; text-align: left; }
+  th { background: #f9fafb; font-weight: 600; }
+  pre { background: #1f2937; color: #f3f4f6; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 0.5rem 0; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  code { font-family: 'JetBrains Mono', monospace; font-size: 0.875em; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 1.5rem 0; }
+  hr.divider-dots { border-top-style: dotted; }
+  hr.divider-double { border-top: 3px double #e5e7eb; }
+  figure { margin: 0; page-break-inside: avoid; }
+  figure img { max-width: 100%; height: auto; }
+  figcaption { text-align: center; font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem; }
+  .columns { display: grid; gap: 1rem; page-break-inside: avoid; }
+  .columns-2 { grid-template-columns: 1fr 1fr; }
+  .columns-3 { grid-template-columns: 1fr 1fr 1fr; }
+  h1, h2, h3 { page-break-after: avoid; }
+  @media print {
+    body { padding: 15mm !important; }
+    .page-break { page-break-after: always; }
+  }
+` : `
+  /* Web mode styles - same as page/print for consistency */
+  body { 
+    ${bodyStyles.join('; ')} !important;
+    padding: 20mm !important;
+    max-width: ${dimensions.width}px !important;
+    margin: 0 auto !important;
+    min-height: auto !important;
+  }
+  .page-break { page-break-after: always; height: 0; }
+  .cover { text-align: center; padding: 4rem 2rem; display: flex; flex-direction: column; justify-content: center; page-break-after: always; }
   .cover h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; }
   .cover p { font-size: 1.125rem; color: #6b7280; margin-top: 0.5rem; }
   .cover .author, .cover .date { font-size: 0.875rem; color: #9ca3af; }
@@ -98,6 +110,50 @@ ${htmlSource || '<p>Start writing in code mode...</p>'}
   @media print {
     .page-break { page-break-after: always; }
   }
+`;
+
+    if (mode === 'code') {
+      // In Code Mode, also include block styles from current blocks to prevent styles from going black-white
+      const blockStyles = blocks.map(block => {
+        const id = block.id.split('-')[0];
+        const className = `.block-${block.type}-${id}`;
+        const css = blockStyleToCss(block.style);
+        // Use !important to override Tailwind preflight resets
+        return css ? `${className} { ${css} !important; }` : '';
+      }).filter(Boolean).join('\n');
+
+      return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  @import url('https://cdn.jsdelivr.net/npm/tailwindcss@4/dist/tailwind.css');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  ${pagePrintCss}
+  ${blockStyles}
+  ${cssSource}
+  ${customCss}
+</style>
+${headSource}
+</head>
+<body>
+${htmlSource || '<p>Start writing in code mode...</p>'}
+</body>
+</html>`;
+    }
+
+    const blocksHtml = blocks.map(blockToHtml).join('\n');
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  @import url('https://cdn.jsdelivr.net/npm/tailwindcss@4/dist/tailwind.css');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  ${pagePrintCss}
   ${cssSource}
   ${customCss}
 </style>
@@ -107,7 +163,7 @@ ${headSource}
 ${blocksHtml}
 </body>
 </html>`;
-  }, [blocks, htmlSource, cssSource, headSource, mode]);
+  }, [blocks, htmlSource, cssSource, headSource, mode, previewMode, pageSize, orientation, dimensions]);
 
   useEffect(() => {
     if (!iframeRef.current) return;
@@ -127,28 +183,14 @@ ${blocksHtml}
     const doc = useDocumentStore.getState().getCurrentDocument();
     const settings = doc?.settings;
     const pageBackground = settings?.pageBackground;
-    const pagePadding = settings?.pagePadding;
     const pageBorderRadius = settings?.pageBorderRadius;
     const pageShadow = settings?.pageShadow;
 
-    if (previewMode === 'web') {
-      return { minHeight: '100%', padding: '2rem', width: '100%', maxWidth: '100%' };
-    }
-    if (previewMode === 'page') {
-      return {
-        width: dimensions.width,
-        minHeight: dimensions.height,
-        padding: pagePadding || '25mm',
-        background: pageBackground || undefined,
-        borderRadius: pageBorderRadius || undefined,
-        boxShadow: pageShadow || undefined,
-      };
-    }
-    // print mode
+    // All modes now use page dimensions for consistency
     return {
       width: dimensions.width,
       minHeight: dimensions.height,
-      padding: pagePadding || '25mm',
+      padding: 0, // Padding is handled inside iframe body
       background: pageBackground || undefined,
       borderRadius: pageBorderRadius || undefined,
       boxShadow: pageShadow || undefined,
@@ -189,7 +231,7 @@ ${blocksHtml}
             title="Preview"
             className="w-full border-0 bg-white"
             style={{ minHeight: previewMode === 'web' ? '100%' : dimensions.height }}
-            sandbox="allow-same-origin"
+            sandbox="allow-same-origin allow-scripts"
           />
         </div>
       </div>
