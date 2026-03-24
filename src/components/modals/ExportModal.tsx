@@ -30,7 +30,8 @@ export function ExportModal({ onClose }: ExportModalProps) {
     const doc = getCurrentDocument();
     const title = doc?.title || 'document';
 
-    switch (format) {
+    try {
+      switch (format) {
       case 'pdf': {
         const html = generateExportHtml();
         const printWindow = window.open('', '_blank');
@@ -60,18 +61,27 @@ export function ExportModal({ onClose }: ExportModalProps) {
       }
       case 'folio': {
         const doc = getCurrentDocument();
-        if (!doc) return;
         const zip = new JSZip();
         zip.file('manifest.json', JSON.stringify({
           version: '1.0.0',
           appVersion: '0.1.0',
+          title: doc?.title || 'Untitled Document',
           exportedAt: new Date().toISOString(),
         }, null, 2));
-        zip.file('document.json', JSON.stringify(doc, null, 2));
+        zip.file('document.json', JSON.stringify({
+          title: doc?.title || 'Untitled Document',
+          blocks,
+          cssSource,
+          headSource,
+          settings: doc?.settings || {},
+        }, null, 2));
         const blob = await zip.generateAsync({ type: 'blob' });
         downloadBlob(`${title}.folio`, blob);
         break;
       }
+    }
+    } catch (err) {
+      console.error('Export failed:', err);
     }
     onClose();
   };
@@ -111,8 +121,24 @@ export function ExportModal({ onClose }: ExportModalProps) {
 <style>
   @import url('https://cdn.jsdelivr.net/npm/tailwindcss@4/dist/tailwind.css');
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; min-height: 100%; }
   body { ${bodyStyles.join('; ')}; }
   @page { size: ${pageSize} ${orientation}; margin: ${margins}; }
+  .cover {
+    text-align: center;
+    padding: 4rem 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100%;
+    page-break-after: always;
+    page-break-inside: avoid;
+  }
+  .cover h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .cover p { font-size: 1.125rem; color: #6b7280; margin-top: 0.5rem; }
+  .cover .author, .cover .date { font-size: 0.875rem; color: #9ca3af; }
+  .page-break { page-break-after: always; }
   ${cssSource}
   ${customCss}
 </style>${headSource}</head><body${pageStyleAttr}>${htmlSource}</body></html>`;
@@ -124,12 +150,25 @@ export function ExportModal({ onClose }: ExportModalProps) {
 <style>
   @import url('https://cdn.jsdelivr.net/npm/tailwindcss@4/dist/tailwind.css');
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; min-height: 100%; }
   body { ${bodyStyles.join('; ')}; }
   @page { size: ${pageSize} ${orientation}; margin: ${margins}; }
-  .page { width: 100%; max-width: ${pageWidth}px; margin: 0 auto; }
+  .page { width: 100%; max-width: ${pageWidth}px; margin: 0 auto; min-height: 100%; }
   .page-break { page-break-after: always; }
-  .cover { text-align: center; padding: 4rem 2rem; display: flex; flex-direction: column; justify-content: center; page-break-after: always; }
-  .cover h1 { font-size: 2.5rem; font-weight: 700; }
+  .cover {
+    text-align: center;
+    padding: 4rem 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100%;
+    page-break-after: always;
+    page-break-inside: avoid;
+  }
+  .cover h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .cover p { font-size: 1.125rem; color: #6b7280; margin-top: 0.5rem; }
+  .cover .author, .cover .date { font-size: 0.875rem; color: #9ca3af; }
   .callout { padding: 1rem; border-radius: 0.5rem; border-left: 4px solid; margin: 0.5rem 0; }
   .callout-info { background: #eff6ff; border-color: #3b82f6; }
   .callout-warning { background: #fffbeb; border-color: #f59e0b; }
@@ -395,6 +434,12 @@ function downloadBlob(name: string, blob: Blob) {
   const a = document.createElement('a');
   a.href = url;
   a.download = name;
+  a.style.display = 'none';
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  // Delay revoke so the browser can start the download
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 100);
 }

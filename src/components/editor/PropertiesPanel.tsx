@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useEditorStore, useDocumentStore } from '../../stores';
-import type { Block, HeadingProps, ParagraphProps, CalloutProps, CodeProps, DividerProps, ColumnsProps, CoverProps, BlockStyle, DocumentSettings } from '../../types';
+import type { Block, HeadingProps, ParagraphProps, CalloutProps, CodeProps, DividerProps, ColumnsProps, CoverProps, BlockStyle, DocumentSettings, SpacerProps, WrapperProps, PageDividerProps } from '../../types';
 import { Copy, Trash2, ChevronDown, ChevronRight, Palette, Type, Box, Layers, AlignLeft } from 'lucide-react';
 
 const DEFAULT_DOCUMENT_SETTINGS: DocumentSettings = {
@@ -470,6 +470,76 @@ function BlockPropsEditor({ block }: { block: Block }) {
             <option value="2">2 Columns</option>
             <option value="3">3 Columns</option>
           </select>
+        </div>
+      );
+    }
+    case 'spacer': {
+      const p = block.props as SpacerProps;
+      return (
+        <div>
+          <label className="form-label">Spacer Height</label>
+          <select value={p.height} onChange={(e) => updateBlockProps(block.id, { height: e.target.value })} className="input-select">
+            {['8', '16', '24', '32', '48', '64', '80', '96', '128'].map(h => (
+              <option key={h} value={h}>{h}px</option>
+            ))}
+          </select>
+        </div>
+      );
+    }
+    case 'wrapper': {
+      const p = block.props as WrapperProps;
+      return (
+        <div>
+          <label className="form-label">Wrapper Tag</label>
+          <select value={p.tag} onChange={(e) => updateBlockProps(block.id, { tag: e.target.value })} className="input-select">
+            <option value="div">div</option>
+            <option value="section">section</option>
+            <option value="article">article</option>
+            <option value="aside">aside</option>
+          </select>
+        </div>
+      );
+    }
+    case 'pageDivider': {
+      const p = block.props as PageDividerProps;
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="form-label">Variant</label>
+            <select value={p.variant} onChange={(e) => updateBlockProps(block.id, { variant: e.target.value })} className="input-select">
+              <option value="solid">Solid</option>
+              <option value="dashed">Dashed</option>
+              <option value="dotted">Dotted</option>
+              <option value="double">Double</option>
+              <option value="gradient">Gradient</option>
+            </select>
+          </div>
+          <div>
+            <label className="form-label">Thickness</label>
+            <select value={p.thickness || '2px'} onChange={(e) => updateBlockProps(block.id, { thickness: e.target.value })} className="input-select">
+              <option value="1px">1px</option>
+              <option value="2px">2px</option>
+              <option value="3px">3px</option>
+              <option value="4px">4px</option>
+              <option value="6px">6px</option>
+            </select>
+          </div>
+          <div>
+            <label className="form-label">Spacing</label>
+            <select value={p.spacing || '16px'} onChange={(e) => updateBlockProps(block.id, { spacing: e.target.value })} className="input-select">
+              <option value="8px">8px</option>
+              <option value="16px">16px</option>
+              <option value="24px">24px</option>
+              <option value="32px">32px</option>
+              <option value="48px">48px</option>
+            </select>
+          </div>
+          {p.variant !== 'gradient' && (
+            <div>
+              <label className="form-label">Color</label>
+              <input type="text" value={p.color || '#94a3b8'} onChange={(e) => updateBlockProps(block.id, { color: e.target.value })} className="input-field" placeholder="#94a3b8" />
+            </div>
+          )}
         </div>
       );
     }

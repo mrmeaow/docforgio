@@ -1,6 +1,6 @@
 import { useRef, useEffect, useMemo, useCallback } from 'react';
 import { useEditorStore, usePreviewStore, useDocumentStore } from '../../stores';
-import { PAGE_SIZES, type Block, type HeadingProps, type ParagraphProps, type ImageProps, type TableProps, type ListProps, type CalloutProps, type CodeProps, type DividerProps, type ColumnsProps, type CoverProps, type HtmlProps, type BlockStyle } from '../../types';
+import { PAGE_SIZES, type Block, type HeadingProps, type ParagraphProps, type ImageProps, type TableProps, type ListProps, type CalloutProps, type CodeProps, type DividerProps, type ColumnsProps, type CoverProps, type HtmlProps, type BlockStyle, type SpacerProps, type WrapperProps, type PageDividerProps } from '../../types';
 import { ZoomIn, ZoomOut, Monitor, FileText, Printer } from 'lucide-react';
 
 export function PreviewPane() {
@@ -45,7 +45,18 @@ export function PreviewPane() {
     transform: none !important;
   }
   .page-break { page-break-after: always; height: 0; }
-  .cover { text-align: center; padding: 4rem 2rem; display: flex; flex-direction: column; justify-content: center; page-break-after: always; }
+  .cover {
+    text-align: center;
+    padding: 4rem 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 40mm - 40mm);
+    min-height: calc(100dvh - 40mm - 40mm);
+    page-break-after: always;
+    page-break-inside: avoid;
+  }
   .cover h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; }
   .cover p { font-size: 1.125rem; color: #6b7280; margin-top: 0.5rem; }
   .cover .author, .cover .date { font-size: 0.875rem; color: #9ca3af; }
@@ -63,6 +74,10 @@ export function PreviewPane() {
   hr { border: none; border-top: 1px solid #e5e7eb; margin: 1.5rem 0; }
   hr.divider-dots { border-top-style: dotted; }
   hr.divider-double { border-top: 3px double #e5e7eb; }
+  .spacer { display: block; }
+  .wrapper { display: block; }
+  .page-divider { border: none; }
+  .page-divider-gradient { background: linear-gradient(to right, transparent, #94a3b8, transparent); height: 2px; }
   figure { margin: 0; page-break-inside: avoid; }
   figure img { max-width: 100%; height: auto; }
   figcaption { text-align: center; font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem; }
@@ -84,7 +99,18 @@ export function PreviewPane() {
     min-height: auto !important;
   }
   .page-break { page-break-after: always; height: 0; }
-  .cover { text-align: center; padding: 4rem 2rem; display: flex; flex-direction: column; justify-content: center; page-break-after: always; }
+  .cover {
+    text-align: center;
+    padding: 4rem 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 40mm - 40mm);
+    min-height: calc(100dvh - 40mm - 40mm);
+    page-break-after: always;
+    page-break-inside: avoid;
+  }
   .cover h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; }
   .cover p { font-size: 1.125rem; color: #6b7280; margin-top: 0.5rem; }
   .cover .author, .cover .date { font-size: 0.875rem; color: #9ca3af; }
@@ -102,6 +128,10 @@ export function PreviewPane() {
   hr { border: none; border-top: 1px solid #e5e7eb; margin: 1.5rem 0; }
   hr.divider-dots { border-top-style: dotted; }
   hr.divider-double { border-top: 3px double #e5e7eb; }
+  .spacer { display: block; }
+  .wrapper { display: block; }
+  .page-divider { border: none; }
+  .page-divider-gradient { background: linear-gradient(to right, transparent, #94a3b8, transparent); height: 2px; }
   figure img { max-width: 100%; height: auto; }
   figcaption { text-align: center; font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem; }
   .columns-2, .columns-3 { display: grid; gap: 1rem; }
@@ -305,6 +335,28 @@ function blockToHtml(block: Block): string {
         return `<div class="column">${colContent}</div>`;
       }).join('');
       return `<div class="columns columns-${p.count} ${className}"${styleStr ? ` style="${styleStr}"` : ''}>${cols}</div>`;
+    }
+    case 'spacer': {
+      const p = block.props as SpacerProps;
+      return `<div class="spacer ${className}"${styleStr ? ` style="${styleStr}"` : ''} style="height: ${p.height || '32'}px; min-height: ${p.height || '32'}px;"></div>`;
+    }
+    case 'wrapper': {
+      const p = block.props as WrapperProps;
+      const colBlocks = block.children || [];
+      const childrenHtml = colBlocks.map((child: Block) => blockToHtml(child)).join('\n');
+      return `<${p.tag} class="wrapper ${className}"${styleStr ? ` style="${styleStr}"` : ''}>${childrenHtml}</${p.tag}>`;
+    }
+    case 'pageDivider': {
+      const p = block.props as PageDividerProps;
+      const variantClass = p.variant === 'gradient' ? 'page-divider-gradient' : '';
+      let styleAddon = '';
+      if (p.variant !== 'gradient') {
+        const borderStyle = p.variant === 'dashed' ? 'dashed' : p.variant === 'dotted' ? 'dotted' : p.variant === 'double' ? 'double' : 'solid';
+        styleAddon = ` style="border-top: ${p.thickness || '2px'} ${borderStyle} ${p.color || '#94a3b8'}; margin: ${p.spacing || '16px'} 0;"`;
+      } else {
+        styleAddon = ` style="background: linear-gradient(to right, transparent, ${p.color || '#94a3b8'}, transparent); height: ${p.thickness || '2px'}; margin: ${p.spacing || '16px'} 0;"`;
+      }
+      return `<hr class="page-divider ${variantClass} ${className}"${styleAddon} />`;
     }
     default:
       return '';

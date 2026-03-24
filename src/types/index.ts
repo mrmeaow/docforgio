@@ -10,7 +10,10 @@ export type BlockType =
   | 'columns'
   | 'pagebreak'
   | 'cover'
-  | 'html';
+  | 'html'
+  | 'spacer'
+  | 'wrapper'
+  | 'pageDivider';
 
 export interface BlockStyle {
   padding?: string;
@@ -124,6 +127,22 @@ export interface HtmlProps {
   html: string;
 }
 
+export interface SpacerProps {
+  height: string;
+}
+
+export interface WrapperProps {
+  tag: 'div' | 'section' | 'article' | 'aside';
+  className?: string;
+}
+
+export interface PageDividerProps {
+  variant: 'solid' | 'dashed' | 'dotted' | 'double' | 'gradient';
+  color?: string;
+  thickness?: string;
+  spacing?: string;
+}
+
 export type BlockProps =
   | HeadingProps
   | ParagraphProps
@@ -136,7 +155,10 @@ export type BlockProps =
   | ColumnsProps
   | PageBreakProps
   | CoverProps
-  | HtmlProps;
+  | HtmlProps
+  | SpacerProps
+  | WrapperProps
+  | PageDividerProps;
 
 export interface Block {
   id: string;
@@ -258,6 +280,9 @@ export const SLASH_MENU_ITEMS: SlashMenuItem[] = [
   { type: 'pagebreak', label: 'Page Break', description: 'Forced page break for PDF', icon: 'scissors' },
   { type: 'cover', label: 'Cover', description: 'Full-height cover page', icon: 'book-open' },
   { type: 'html', label: 'Custom HTML', description: 'Raw HTML block', icon: 'file-code' },
+  { type: 'spacer', label: 'Spacer', description: 'Vertical spacing (br)', icon: 'move-vertical' },
+  { type: 'wrapper', label: 'Wrapper', description: 'Div/Section container', icon: 'box' },
+  { type: 'pageDivider', label: 'Page Divider', description: 'Complex page separator', icon: 'separator-horizontal' },
 ];
 
 export const PAGE_SIZES: Record<PageSize, { width: string; height: string }> = {

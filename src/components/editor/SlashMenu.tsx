@@ -4,13 +4,14 @@ import type { BlockType, SlashMenuItem } from '../../types';
 import { SLASH_MENU_ITEMS } from '../../types';
 import {
   Heading, Type, Image, Table, List, AlertCircle, Code, Minus,
-  Columns, Scissors, BookOpen, FileCode, Search
+  Columns, Scissors, BookOpen, FileCode, Search, MoveVertical, Box, SeparatorHorizontal
 } from 'lucide-react';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   heading: Heading, type: Type, image: Image, table: Table, list: List,
   'alert-circle': AlertCircle, code: Code, minus: Minus, columns: Columns,
   scissors: Scissors, 'book-open': BookOpen, 'file-code': FileCode,
+  'move-vertical': MoveVertical, box: Box, 'separator-horizontal': SeparatorHorizontal,
 };
 
 interface SlashMenuProps {
