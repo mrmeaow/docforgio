@@ -199,7 +199,9 @@ ${blocksHtml}
 
 function blockToHtml(block: Block): string {
   const styleStr = blockStyleToCss(block.style);
-  const attrs = styleStr ? ` style="${styleStr}"` : '';
+  const id = block.id.split('-')[0];
+  const className = `block-${block.type}-${id}`;
+  const attrs = styleStr ? ` class="${className}" style="${styleStr}"` : ` class="${className}"`;
 
   switch (block.type) {
     case 'heading': {
@@ -232,7 +234,7 @@ function blockToHtml(block: Block): string {
     }
     case 'callout': {
       const p = block.props as CalloutProps;
-      return `<div class="callout callout-${p.variant}"${attrs}><p>${escapeHtml(p.text)}</p></div>`;
+      return `<div class="callout callout-${p.variant} ${className}"${styleStr ? ` style="${styleStr}"` : ''}><p>${escapeHtml(p.text)}</p></div>`;
     }
     case 'code': {
       const p = block.props as CodeProps;
@@ -241,13 +243,13 @@ function blockToHtml(block: Block): string {
     case 'divider': {
       const p = block.props as DividerProps;
       const cls = p.style === 'dots' ? 'divider-dots' : p.style === 'double' ? 'divider-double' : '';
-      return `<hr${cls ? ` class="${cls}"` : ''}${attrs} />`;
+      return `<hr class="${cls} ${className}"${styleStr ? ` style="${styleStr}"` : ''} />`;
     }
     case 'pagebreak':
-      return '<div class="page-break"></div>';
+      return `<div class="page-break ${className}"></div>`;
     case 'cover': {
       const p = block.props as CoverProps;
-      return `<div class="cover"${attrs}><h1>${escapeHtml(p.title)}</h1>${p.subtitle ? `<p>${escapeHtml(p.subtitle)}</p>` : ''}${p.author ? `<p class="author">${escapeHtml(p.author)}</p>` : ''}${p.date ? `<p class="date">${escapeHtml(p.date)}</p>` : ''}</div>`;
+      return `<div class="cover ${className}"${styleStr ? ` style="${styleStr}"` : ''}><h1>${escapeHtml(p.title)}</h1>${p.subtitle ? `<p>${escapeHtml(p.subtitle)}</p>` : ''}${p.author ? `<p class="author">${escapeHtml(p.author)}</p>` : ''}${p.date ? `<p class="date">${escapeHtml(p.date)}</p>` : ''}</div>`;
     }
     case 'html': {
       const p = block.props as HtmlProps;
@@ -260,7 +262,7 @@ function blockToHtml(block: Block): string {
         const colContent = colBlocks[i] ? blockToHtml(colBlocks[i]) : '';
         return `<div class="column">${colContent}</div>`;
       }).join('');
-      return `<div class="columns columns-${p.count}"${attrs}>${cols}</div>`;
+      return `<div class="columns columns-${p.count} ${className}"${styleStr ? ` style="${styleStr}"` : ''}>${cols}</div>`;
     }
     default:
       return '';
