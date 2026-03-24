@@ -32,6 +32,14 @@ export function PreviewPane() {
     if (pageBackground) bodyStyles.push(`background: ${pageBackground}`);
 
     if (mode === 'code') {
+      // In Code Mode, also include block styles from current blocks to prevent styles from going black-white
+      const blockStyles = blocks.map(block => {
+        const id = block.id.split('-')[0];
+        const className = `.block-${block.type}-${id}`;
+        const css = blockStyleToCss(block.style);
+        return css ? `${className} { ${css}; }` : '';
+      }).filter(Boolean).join('\n');
+
       return `<!DOCTYPE html>
 <html>
 <head>
@@ -40,6 +48,7 @@ export function PreviewPane() {
   @import url('https://cdn.jsdelivr.net/npm/tailwindcss@4/dist/tailwind.css');
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { ${bodyStyles.join('; ')}; padding: 2rem; }
+  ${blockStyles}
   ${cssSource}
   ${customCss}
 </style>
