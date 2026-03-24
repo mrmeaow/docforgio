@@ -81,7 +81,7 @@ export function createBlock(type: BlockType): Block {
     case 'list':
       return { ...baseBlock, props: { type: 'unordered', items: [{ id: generateId(), text: 'List item' }] } };
     case 'callout':
-      return { ...baseBlock, props: { text: 'Callout text', variant: 'info' } };
+      return { ...baseBlock, props: { text: 'Callout text', variant: 'note' } };
     case 'code':
       return { ...baseBlock, props: { code: '// Your code here', language: 'javascript' } };
     case 'divider':
@@ -316,10 +316,11 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     lines.push('   =========================================== */');
     lines.push('');
     lines.push('.callout { padding: 1rem; border-radius: 0.375rem; }');
-    lines.push('.callout-info { background: #eff6ff; border-left: 4px solid #3b82f6; }');
-    lines.push('.callout-warning { background: #fffbeb; border-left: 4px solid #f59e0b; }');
-    lines.push('.callout-error { background: #fef2f2; border-left: 4px solid #ef4444; }');
-    lines.push('.callout-success { background: #f0fdf4; border-left: 4px solid #22c55e; }');
+    lines.push('.callout-note { background: #dbeafe; border-left: 4px solid #3b82f6; color: #1e40af; }');
+    lines.push('.callout-tip { background: #dcfce7; border-left: 4px solid #22c55e; color: #166534; }');
+    lines.push('.callout-important { background: #f3e8ff; border-left: 4px solid #a855f7; color: #6b21a8; }');
+    lines.push('.callout-warning { background: #fef9c3; border-left: 4px solid #eab308; color: #854d0e; }');
+    lines.push('.callout-caution { background: #fee2e2; border-left: 4px solid #ef4444; color: #991b1b; }');
     lines.push('');
 
     lines.push('/* ===========================================');
@@ -452,9 +453,10 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
         const p = el.querySelector('p');
         if (p) (block.props as CalloutProps).text = p.textContent || '';
         if (el.classList.contains('callout-warning')) (block.props as CalloutProps).variant = 'warning';
-        else if (el.classList.contains('callout-error')) (block.props as CalloutProps).variant = 'error';
-        else if (el.classList.contains('callout-success')) (block.props as CalloutProps).variant = 'success';
-        else (block.props as CalloutProps).variant = 'info';
+        else if (el.classList.contains('callout-caution')) (block.props as CalloutProps).variant = 'caution';
+        else if (el.classList.contains('callout-tip')) (block.props as CalloutProps).variant = 'tip';
+        else if (el.classList.contains('callout-important')) (block.props as CalloutProps).variant = 'important';
+        else (block.props as CalloutProps).variant = 'note';
       } else if (tag === 'div' && el.classList.contains('columns')) {
         block = createBlock('columns');
         const cols = el.querySelectorAll('.column');
@@ -640,11 +642,19 @@ function blockToHtml(block: Block, indent: number = 0): string {
     }
     case 'callout': {
       const p = block.props as import('../types').CalloutProps;
+      const icons: Record<string, string> = { note: 'ℹ', tip: '✓', important: '◆', warning: '⚠', caution: '✕' };
+      const labels: Record<string, string> = { note: 'Note', tip: 'Tip', important: 'Important', warning: 'Warning', caution: 'Caution' };
+      const icon = icons[p.variant] || icons.note;
+      const label = labels[p.variant] || labels.note;
       const styleAttr = styleStr ? ` style="${styleStr}"` : '';
-      return `${pad}<div class="callout callout-${p.variant} ${className}"${styleAttr}><p>${p.text}</p></div>`;
+      return `${pad}<div class="callout callout-${p.variant} ${className}"${styleAttr}><div class="callout-title">${icon} ${label}</div><p>${p.text}</p></div>`;
     }
     case 'code': {
       const p = block.props as import('../types').CodeProps;
+      const lang = p.language?.toLowerCase() || '';
+      if (lang === 'mermaid') {
+        return `${pad}<pre class="language-mermaid ${className}"${styleStr ? ` style="${styleStr}"` : ''}><code class="language-mermaid">${p.code}</code></pre>`;
+      }
       return `${pad}<pre${attrs}><code class="language-${p.language}">${p.code}</code></pre>`;
     }
     case 'divider': {
@@ -858,9 +868,10 @@ function parseElementToBlock(el: Element): Block | null {
     const p = el.querySelector('p');
     if (p) (block.props as CalloutProps).text = p.textContent || '';
     if (el.classList.contains('callout-warning')) (block.props as CalloutProps).variant = 'warning';
-    else if (el.classList.contains('callout-error')) (block.props as CalloutProps).variant = 'error';
-    else if (el.classList.contains('callout-success')) (block.props as CalloutProps).variant = 'success';
-    else (block.props as CalloutProps).variant = 'info';
+    else if (el.classList.contains('callout-caution')) (block.props as CalloutProps).variant = 'caution';
+    else if (el.classList.contains('callout-tip')) (block.props as CalloutProps).variant = 'tip';
+    else if (el.classList.contains('callout-important')) (block.props as CalloutProps).variant = 'important';
+    else (block.props as CalloutProps).variant = 'note';
   } else if (tag === 'div' && el.classList.contains('columns')) {
     block = createBlock('columns');
     const cols = el.querySelectorAll('.column');

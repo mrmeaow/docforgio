@@ -203,8 +203,8 @@ function ImportTemplateTab() {
   const [result, setResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const handleFile = (file: File) => {
-    if (!file.name.endsWith('.json') && !file.name.endsWith('.folio')) {
-      setResult({ type: 'error', message: 'Please select a .json or .folio file.' });
+    if (!file.name.endsWith('.json') && !file.name.endsWith('.docforgio')) {
+      setResult({ type: 'error', message: 'Please select a .json or .docforgio file.' });
       return;
     }
 
@@ -261,12 +261,12 @@ function ImportTemplateTab() {
         </div>
         <div className="text-center">
           <p className="text-sm font-semibold text-surface-700 dark:text-surface-300">Drop a template file here</p>
-          <p className="text-[12px] text-surface-400 mt-1">or click to browse (.json, .folio)</p>
+          <p className="text-[12px] text-surface-400 mt-1">or click to browse (.json, .docforgio)</p>
         </div>
         <input
           ref={fileInputRef}
           type="file"
-          accept=".json,.folio"
+          accept=".json,.docforgio"
           onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
           className="hidden"
         />

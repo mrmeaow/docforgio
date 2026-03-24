@@ -3,6 +3,68 @@ import { useEditorStore, usePreviewStore, useDocumentStore } from '../../stores'
 import { PAGE_SIZES, type Block, type HeadingProps, type ParagraphProps, type ImageProps, type TableProps, type ListProps, type CalloutProps, type CodeProps, type DividerProps, type ColumnsProps, type CoverProps, type HtmlProps, type BlockStyle, type SpacerProps, type WrapperProps, type PageDividerProps } from '../../types';
 import { ZoomIn, ZoomOut, Monitor, FileText, Printer } from 'lucide-react';
 
+const HIGHLIGHTJS_VERSION = '11.11.1';
+const MERMAID_VERSION = '11.13.0';
+
+function hasMermaidBlock(blocks: Block[]): boolean {
+  for (const block of blocks) {
+    if (block.type === 'code' && (block.props as CodeProps).language?.toLowerCase() === 'mermaid') return true;
+    if (block.children && hasMermaidBlock(block.children)) return true;
+  }
+  return false;
+}
+
+function getCodeHighlightHead(theme: 'light' | 'dark', hasMermaid: boolean): string {
+  const hljsTheme = theme === 'dark' ? 'github-dark.min.css' : 'github.min.css';
+  let head = `<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@${HIGHLIGHTJS_VERSION}/build/styles/${hljsTheme}">`;
+  head += `\n<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@${HIGHLIGHTJS_VERSION}/build/highlight.min.js"></script>`;
+  if (hasMermaid) {
+    head += `\n<script src="https://cdn.jsdelivr.net/npm/mermaid@${MERMAID_VERSION}/dist/mermaid.min.js"></script>`;
+  }
+  return head;
+}
+
+function getCodeHighlightScript(hasMermaid: boolean): string {
+  let script = `<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('pre code:not(.language-mermaid)').forEach(function(el) {
+    if (!el.dataset.highlighted) {
+      hljs.highlightElement(el);
+      el.dataset.highlighted = 'true';
+    }
+  });
+`;
+  if (hasMermaid) {
+    script += `
+  mermaid.initialize({ startOnLoad: false, theme: 'dark', fontFamily: "'JetBrains Mono', monospace" });
+  var mermaidBlocks = document.querySelectorAll('pre.language-mermaid');
+  if (mermaidBlocks.length > 0) {
+    var id = 0;
+    mermaidBlocks.forEach(function(block) {
+      var codeEl = block.querySelector('code') || block;
+      var definition = codeEl.textContent;
+      var container = document.createElement('div');
+      container.className = 'mermaid-diagram';
+      container.style.background = 'white';
+      container.style.padding = '1rem';
+      container.style.borderRadius = '0.5rem';
+      container.style.margin = '0.5rem 0';
+      container.style.overflowX = 'auto';
+      mermaid.render('mermaid-' + (id++), definition).then(function(result) {
+        container.innerHTML = result.svg;
+        block.parentNode.replaceChild(container, block);
+      }).catch(function(err) {
+        container.innerHTML = '<pre style="color:red;">Mermaid Error: ' + err.message + '</pre>';
+        block.parentNode.replaceChild(container, block);
+      });
+    });
+  }
+`;
+  }
+  script += `});\n</script>`;
+  return script;
+}
+
 export function PreviewPane() {
   const { blocks, htmlSource, cssSource, headSource, mode } = useEditorStore();
   const { previewMode, zoom, pageSize, orientation, setPreviewMode, setZoom } = usePreviewStore();
@@ -22,6 +84,7 @@ export function PreviewPane() {
     const baseFontSize = settings?.baseFontSize || 16;
     const pageBackground = settings?.pageBackground;
     const customCss = settings?.customCss || '';
+    const hasMermaid = hasMermaidBlock(blocks);
 
     const bodyStyles: string[] = [
       `font-family: '${fontFamily}', system-ui, sans-serif`,
@@ -60,17 +123,23 @@ export function PreviewPane() {
   .cover h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; }
   .cover p { font-size: 1.125rem; color: #6b7280; margin-top: 0.5rem; }
   .cover .author, .cover .date { font-size: 0.875rem; color: #9ca3af; }
-  .callout { padding: 1rem; border-radius: 0.5rem; border-left: 4px solid; margin: 0.5rem 0; page-break-inside: avoid; }
-  .callout-info { background: #eff6ff; border-color: #3b82f6; }
-  .callout-warning { background: #fffbeb; border-color: #f59e0b; }
-  .callout-error { background: #fef2f2; border-color: #ef4444; }
-  .callout-success { background: #f0fdf4; border-color: #22c55e; }
+  .callout { padding: 1rem 1rem 1rem 0.75rem; border-radius: 0.5rem; border-left: 4px solid; margin: 0.5rem 0; page-break-inside: avoid; }
+  .callout-title { font-weight: 700; font-size: 0.85em; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.4rem; }
+  .callout-note { background: #dbeafe; border-color: #3b82f6; color: #1e40af; }
+  .callout-tip { background: #dcfce7; border-color: #22c55e; color: #166534; }
+  .callout-important { background: #f3e8ff; border-color: #a855f7; color: #6b21a8; }
+  .callout-warning { background: #fef9c3; border-color: #eab308; color: #854d0e; }
+  .callout-caution { background: #fee2e2; border-color: #ef4444; color: #991b1b; }
   table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; page-break-inside: avoid; }
   th, td { border: 1px solid #e5e7eb; padding: 0.5rem 0.75rem; text-align: left; }
   th { background: #f9fafb; font-weight: 600; }
-  pre { background: #1f2937; color: #f3f4f6; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 0.5rem 0; page-break-inside: avoid; }
-  pre code { background: none; padding: 0; }
+  pre { background: #1e1e2e; color: #cdd6f4; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 0.5rem 0; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; font-size: 0.85em; line-height: 1.5; color: #cdd6f4; }
+  pre.language-mermaid { background: #1e1e2e; border: 1px solid #313244; }
   code { font-family: 'JetBrains Mono', monospace; font-size: 0.875em; }
+  :not(pre) > code { background: rgba(49,50,68,0.6); color: #cba6f7; padding: 0.2em 0.4em; border-radius: 0.25rem; }
+  .mermaid-diagram { background: #1e1e2e; padding: 1rem; border-radius: 0.5rem; margin: 0.5rem 0; overflow-x: auto; border: 1px solid #313244; }
+  .mermaid-diagram svg { max-width: 100%; }
   hr { border: none; border-top: 1px solid #e5e7eb; margin: 1.5rem 0; }
   hr.divider-dots { border-top-style: dotted; }
   hr.divider-double { border-top: 3px double #e5e7eb; }
@@ -114,17 +183,23 @@ export function PreviewPane() {
   .cover h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; }
   .cover p { font-size: 1.125rem; color: #6b7280; margin-top: 0.5rem; }
   .cover .author, .cover .date { font-size: 0.875rem; color: #9ca3af; }
-  .callout { padding: 1rem; border-radius: 0.5rem; border-left: 4px solid; margin: 0.5rem 0; }
-  .callout-info { background: #eff6ff; border-color: #3b82f6; }
-  .callout-warning { background: #fffbeb; border-color: #f59e0b; }
-  .callout-error { background: #fef2f2; border-color: #ef4444; }
-  .callout-success { background: #f0fdf4; border-color: #22c55e; }
+  .callout { padding: 1rem 1rem 1rem 0.75rem; border-radius: 0.5rem; border-left: 4px solid; margin: 0.5rem 0; }
+  .callout-title { font-weight: 700; font-size: 0.85em; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.4rem; }
+  .callout-note { background: #dbeafe; border-color: #3b82f6; color: #1e40af; }
+  .callout-tip { background: #dcfce7; border-color: #22c55e; color: #166534; }
+  .callout-important { background: #f3e8ff; border-color: #a855f7; color: #6b21a8; }
+  .callout-warning { background: #fef9c3; border-color: #eab308; color: #854d0e; }
+  .callout-caution { background: #fee2e2; border-color: #ef4444; color: #991b1b; }
   table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; }
   th, td { border: 1px solid #e5e7eb; padding: 0.5rem 0.75rem; text-align: left; }
   th { background: #f9fafb; font-weight: 600; }
-  pre { background: #1f2937; color: #f3f4f6; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 0.5rem 0; }
-  pre code { background: none; padding: 0; }
+  pre { background: #1e1e2e; color: #cdd6f4; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 0.5rem 0; }
+  pre code { background: none; padding: 0; font-size: 0.85em; line-height: 1.5; color: #cdd6f4; }
+  pre.language-mermaid { background: #1e1e2e; border: 1px solid #313244; }
   code { font-family: 'JetBrains Mono', monospace; font-size: 0.875em; }
+  :not(pre) > code { background: rgba(49,50,68,0.6); color: #cba6f7; padding: 0.2em 0.4em; border-radius: 0.25rem; }
+  .mermaid-diagram { background: #1e1e2e; padding: 1rem; border-radius: 0.5rem; margin: 0.5rem 0; overflow-x: auto; border: 1px solid #313244; }
+  .mermaid-diagram svg { max-width: 100%; }
   hr { border: none; border-top: 1px solid #e5e7eb; margin: 1.5rem 0; }
   hr.divider-dots { border-top-style: dotted; }
   hr.divider-double { border-top: 3px double #e5e7eb; }
@@ -141,6 +216,9 @@ export function PreviewPane() {
     .page-break { page-break-after: always; }
   }
 `;
+
+    const codeHighlightHead = getCodeHighlightHead('dark', hasMermaid);
+    const codeHighlightScript = getCodeHighlightScript(hasMermaid);
 
     if (mode === 'code') {
       // In Code Mode, also include block styles from current blocks to prevent styles from going black-white
@@ -165,10 +243,12 @@ export function PreviewPane() {
   ${cssSource}
   ${customCss}
 </style>
+${codeHighlightHead}
 ${headSource}
 </head>
 <body>
 ${htmlSource || '<p>Start writing in code mode...</p>'}
+${codeHighlightScript}
 </body>
 </html>`;
     }
@@ -187,10 +267,12 @@ ${htmlSource || '<p>Start writing in code mode...</p>'}
   ${cssSource}
   ${customCss}
 </style>
+${codeHighlightHead}
 ${headSource}
 </head>
 <body>
 ${blocksHtml}
+${codeHighlightScript}
 </body>
 </html>`;
   }, [blocks, htmlSource, cssSource, headSource, mode, previewMode, pageSize, orientation, dimensions]);
@@ -306,10 +388,18 @@ function blockToHtml(block: Block): string {
     }
     case 'callout': {
       const p = block.props as CalloutProps;
-      return `<div class="callout callout-${p.variant} ${className}"${styleStr ? ` style="${styleStr}"` : ''}><p>${escapeHtml(p.text)}</p></div>`;
+      const icons: Record<string, string> = { note: 'ℹ', tip: '✓', important: '◆', warning: '⚠', caution: '✕' };
+      const labels: Record<string, string> = { note: 'Note', tip: 'Tip', important: 'Important', warning: 'Warning', caution: 'Caution' };
+      const icon = icons[p.variant] || icons.note;
+      const label = labels[p.variant] || labels.note;
+      return `<div class="callout callout-${p.variant} ${className}"${styleStr ? ` style="${styleStr}"` : ''}><div class="callout-title">${icon} ${label}</div><p>${escapeHtml(p.text)}</p></div>`;
     }
     case 'code': {
       const p = block.props as CodeProps;
+      const lang = p.language?.toLowerCase() || '';
+      if (lang === 'mermaid') {
+        return `<pre class="language-mermaid ${className}"${styleStr ? ` style="${styleStr}"` : ''}><code class="language-mermaid">${escapeHtml(p.code)}</code></pre>`;
+      }
       return `<pre${attrs}><code class="language-${escapeHtml(p.language)}">${escapeHtml(p.code)}</code></pre>`;
     }
     case 'divider': {

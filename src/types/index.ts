@@ -93,7 +93,7 @@ export interface ListItem {
 
 export interface CalloutProps {
   text: string;
-  variant: 'info' | 'warning' | 'error' | 'success';
+  variant: 'note' | 'tip' | 'important' | 'warning' | 'caution';
   color?: string;
 }
 
@@ -248,7 +248,7 @@ export interface Settings {
 
 export type PreviewMode = 'web' | 'page' | 'print';
 export type PageSize = 'A3' | 'A4' | 'A5' | 'Letter' | 'Legal' | 'Tabloid' | 'Custom';
-export type ExportFormat = 'html' | 'pdf' | 'markdown' | 'json' | 'folio';
+export type ExportFormat = 'html' | 'pdf' | 'markdown' | 'json' | 'docforgio';
 export type EditorMode = 'nocode' | 'code';
 export type Theme = 'light' | 'dark' | 'system';
 
@@ -274,7 +274,7 @@ export const SLASH_MENU_ITEMS: SlashMenuItem[] = [
   { type: 'table', label: 'Table', description: 'Rows and columns', icon: 'table' },
   { type: 'list', label: 'List', description: 'Ordered or unordered list', icon: 'list' },
   { type: 'callout', label: 'Callout', description: 'Info, warning, or error box', icon: 'alert-circle' },
-  { type: 'code', label: 'Code Block', description: 'Syntax-highlighted code', icon: 'code' },
+  { type: 'code', label: 'Code Block', description: 'Syntax-highlighted code or Mermaid diagrams', icon: 'code' },
   { type: 'divider', label: 'Divider', description: 'Horizontal separator', icon: 'minus' },
   { type: 'columns', label: 'Columns', description: '2 or 3 column layout', icon: 'columns' },
   { type: 'pagebreak', label: 'Page Break', description: 'Forced page break for PDF', icon: 'scissors' },

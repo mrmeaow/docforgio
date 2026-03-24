@@ -177,7 +177,7 @@ export function TemplatesPage() {
               <div>
                 <h3 className="text-sm font-bold text-surface-900 dark:text-surface-100 mb-1">Built-in Templates</h3>
                 <p className="text-[13px] text-surface-500 dark:text-surface-400 leading-relaxed">
-                  Folio ships with 16 professionally designed templates for PRDs, research papers, screenplays, legal documents, and more. Click any template to create a new document.
+                  DocForgio ships with 16 professionally designed templates for PRDs, research papers, screenplays, legal documents, and more. Click any template to create a new document.
                 </p>
               </div>
             </div>

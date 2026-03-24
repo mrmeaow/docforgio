@@ -1,10 +1,10 @@
-# Folio — Open Document Studio
+# DocForgio — Open Document Studio
 
 A free, open-source, browser-native document composition studio.
 
 ## Overview
 
-Folio runs entirely in the browser with zero backend infrastructure. All data lives in **IndexedDB**, portable via export at any time.
+DocForgio runs entirely in the browser with zero backend infrastructure. All data lives in **IndexedDB**, portable via export at any time.
 
 The core experience is a **split-pane editor**: a visual no-code block editor on the left and a live-rendered preview on the right. Advanced users can flip to **Code Mode** — a full HTML/CSS editor with Tailwind v4 support.
 
@@ -77,57 +77,6 @@ folio/
 └── PLAN.md              # Product requirements document
 ```
 
-## Features (MVP Roadmap)
-
-### Sprint S-01: Foundation ✅
-- Vite + React 19 + Tailwind CSS v4 scaffold
-- Zustand stores
-- IndexedDB schema
-- Home screen with document CRUD
-
-### Sprint S-02: Block Engine
-- Block tree data model
-- Heading, Paragraph, Divider, List, Callout blocks
-- Properties panel
-- Undo/redo stack
-
-### Sprint S-03: Block Engine Extended
-- Image, Table, Code, Columns, PageBreak, Cover, HTML blocks
-- Drag-and-drop reordering
-- Slash menu for block insertion
-
-### Sprint S-04: Code Mode
-- CodeMirror 6 integration
-- HTML/CSS/Head tabs
-- Bidirectional No-Code ↔ Code mode switching
-
-### Sprint S-05: Preview
-- iframe srcdoc renderer
-- Tailwind CSS v4 CDN injection
-- Web/Page/Print preview modes
-- Zoom controls
-
-### Sprint S-06: Export Engine
-- HTML single-file export
-- PDF via Print API
-- Markdown export
-- JSON backup
-
-### Sprint S-07-08: Templates
-- 15+ bundled templates
-- Template picker
-- Template Builder
-- .folio file format
-
-### Sprint S-09: Polish
-- Command palette (Cmd+K)
-- Keyboard shortcuts
-- PWA / Service Worker
-
-### Sprint S-10: Launch
-- E2E tests
-- Accessibility audit
-- Documentation
 
 ## Data Models
 
@@ -146,6 +95,9 @@ All bundled templates are released under CC0 1.0 (public domain).
 
 ## Contributing
 
+> [!NOTE]
+> Tests are not configured properly
+
 1. Fork the repo
 2. Create a feature branch
 3. Make your changes
@@ -153,5 +105,8 @@ All bundled templates are released under CC0 1.0 (public domain).
 5. Submit a PR
 
 ## Community Templates
+
+> [!NOTE]
+> This part is not ready yet. W.I.P
 
 Submit your custom templates via PR to the `/community-templates` directory. See `TEMPLATE_GUIDE.md` (coming soon) for authoring instructions.
