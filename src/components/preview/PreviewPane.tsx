@@ -37,7 +37,8 @@ export function PreviewPane() {
         const id = block.id.split('-')[0];
         const className = `.block-${block.type}-${id}`;
         const css = blockStyleToCss(block.style);
-        return css ? `${className} { ${css}; }` : '';
+        // Use !important to override Tailwind preflight resets
+        return css ? `${className} { ${css} !important; }` : '';
       }).filter(Boolean).join('\n');
 
       return `<!DOCTYPE html>
