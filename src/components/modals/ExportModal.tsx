@@ -83,14 +83,17 @@ export function ExportModal({ onClose }: ExportModalProps) {
     const fontFamily = settings?.fontFamily || 'Inter';
     const baseFontSize = settings?.baseFontSize || 16;
     const pageBackground = settings?.pageBackground;
-    const pagePadding = settings?.pagePadding;
     const pageBorderRadius = settings?.pageBorderRadius;
     const pageShadow = settings?.pageShadow;
     const customCss = settings?.customCss || '';
 
+    // Calculate page dimensions for consistent rendering
+    const size = PAGE_SIZES[pageSize] || PAGE_SIZES.A4;
+    const pageWidth = orientation === 'landscape' ? size.height : size.width;
+
     const pageStyles: string[] = [];
     if (pageBackground) pageStyles.push(`background: ${pageBackground}`);
-    if (pagePadding) pageStyles.push(`padding: ${pagePadding}`);
+    // Don't add padding here - @page margin handles it for print
     if (pageBorderRadius) pageStyles.push(`border-radius: ${pageBorderRadius}`);
     if (pageShadow) pageStyles.push(`box-shadow: ${pageShadow}`);
     const pageStyleAttr = pageStyles.length ? ` style="${pageStyles.join('; ')}"` : '';
@@ -108,7 +111,7 @@ export function ExportModal({ onClose }: ExportModalProps) {
 <style>
   @import url('https://cdn.jsdelivr.net/npm/tailwindcss@4/dist/tailwind.css');
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { ${bodyStyles.join('; ')}; padding: ${margins}; }
+  body { ${bodyStyles.join('; ')}; }
   @page { size: ${pageSize} ${orientation}; margin: ${margins}; }
   ${cssSource}
   ${customCss}
@@ -121,11 +124,11 @@ export function ExportModal({ onClose }: ExportModalProps) {
 <style>
   @import url('https://cdn.jsdelivr.net/npm/tailwindcss@4/dist/tailwind.css');
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { ${bodyStyles.join('; ')}; padding: ${margins}; }
+  body { ${bodyStyles.join('; ')}; }
   @page { size: ${pageSize} ${orientation}; margin: ${margins}; }
-  .page { width: 100%; }
+  .page { width: 100%; max-width: ${pageWidth}px; margin: 0 auto; }
   .page-break { page-break-after: always; }
-  .cover { text-align: center; padding: 4rem 2rem; }
+  .cover { text-align: center; padding: 4rem 2rem; display: flex; flex-direction: column; justify-content: center; page-break-after: always; }
   .cover h1 { font-size: 2.5rem; font-weight: 700; }
   .callout { padding: 1rem; border-radius: 0.5rem; border-left: 4px solid; margin: 0.5rem 0; }
   .callout-info { background: #eff6ff; border-color: #3b82f6; }
