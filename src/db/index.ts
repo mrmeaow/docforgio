@@ -2,7 +2,7 @@ import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import type { Document, Template, Asset, Settings } from '../types';
 
 // IndexedDB schema definition
-export interface FolioDBSchema extends DBSchema {
+export interface DocForgioDBSchema extends DBSchema {
   documents: {
     key: string;
     value: Document;
@@ -37,12 +37,12 @@ export interface FolioDBSchema extends DBSchema {
   };
 }
 
-const DB_NAME = 'folio-db';
+const DB_NAME = 'docforgio-db';
 const DB_VERSION = 1;
 
 // Initialize the database
-export async function initDB(): Promise<IDBPDatabase<FolioDBSchema>> {
-  return openDB<FolioDBSchema>(DB_NAME, DB_VERSION, {
+export async function initDB(): Promise<IDBPDatabase<DocForgioDBSchema>> {
+  return openDB<DocForgioDBSchema>(DB_NAME, DB_VERSION, {
     upgrade(db) {
       // Documents store
       if (!db.objectStoreNames.contains('documents')) {
@@ -86,20 +86,20 @@ export async function initDB(): Promise<IDBPDatabase<FolioDBSchema>> {
 }
 
 // Document operations
-export async function getDocument(db: IDBPDatabase<FolioDBSchema>, id: string): Promise<Document | undefined> {
+export async function getDocument(db: IDBPDatabase<DocForgioDBSchema>, id: string): Promise<Document | undefined> {
   return db.get('documents', id);
 }
 
-export async function getAllDocuments(db: IDBPDatabase<FolioDBSchema>): Promise<Document[]> {
+export async function getAllDocuments(db: IDBPDatabase<DocForgioDBSchema>): Promise<Document[]> {
   return db.getAll('documents');
 }
 
-export async function saveDocument(db: IDBPDatabase<FolioDBSchema>, doc: Document): Promise<void> {
+export async function saveDocument(db: IDBPDatabase<DocForgioDBSchema>, doc: Document): Promise<void> {
   doc.updatedAt = Date.now();
   await db.put('documents', doc);
 }
 
-export async function deleteDocument(db: IDBPDatabase<FolioDBSchema>, id: string): Promise<void> {
+export async function deleteDocument(db: IDBPDatabase<DocForgioDBSchema>, id: string): Promise<void> {
   await db.delete('documents', id);
   // Also delete associated assets
   const assets = await db.getAllFromIndex('assets', 'documentId', id);
@@ -109,93 +109,93 @@ export async function deleteDocument(db: IDBPDatabase<FolioDBSchema>, id: string
 }
 
 export async function getDocumentsByTemplate(
-  db: IDBPDatabase<FolioDBSchema>,
+  db: IDBPDatabase<DocForgioDBSchema>,
   templateId: string
 ): Promise<Document[]> {
   return db.getAllFromIndex('documents', 'templateId', templateId);
 }
 
 // Template operations
-export async function getTemplate(db: IDBPDatabase<FolioDBSchema>, id: string): Promise<Template | undefined> {
+export async function getTemplate(db: IDBPDatabase<DocForgioDBSchema>, id: string): Promise<Template | undefined> {
   return db.get('templates', id);
 }
 
-export async function getTemplateBySlug(db: IDBPDatabase<FolioDBSchema>, slug: string): Promise<Template | undefined> {
+export async function getTemplateBySlug(db: IDBPDatabase<DocForgioDBSchema>, slug: string): Promise<Template | undefined> {
   return db.getFromIndex('templates', 'slug', slug);
 }
 
-export async function getAllTemplates(db: IDBPDatabase<FolioDBSchema>): Promise<Template[]> {
+export async function getAllTemplates(db: IDBPDatabase<DocForgioDBSchema>): Promise<Template[]> {
   return db.getAll('templates');
 }
 
 export async function getTemplatesByCategory(
-  db: IDBPDatabase<FolioDBSchema>,
+  db: IDBPDatabase<DocForgioDBSchema>,
   category: string
 ): Promise<Template[]> {
   return db.getAllFromIndex('templates', 'category', category);
 }
 
-export async function saveTemplate(db: IDBPDatabase<FolioDBSchema>, template: Template): Promise<void> {
+export async function saveTemplate(db: IDBPDatabase<DocForgioDBSchema>, template: Template): Promise<void> {
   await db.put('templates', template);
 }
 
-export async function deleteTemplate(db: IDBPDatabase<FolioDBSchema>, id: string): Promise<void> {
+export async function deleteTemplate(db: IDBPDatabase<DocForgioDBSchema>, id: string): Promise<void> {
   const template = await db.get('templates', id);
   if (template && !template.isBuiltIn) {
     await db.delete('templates', id);
   }
 }
 
-export async function getBuiltInTemplates(db: IDBPDatabase<FolioDBSchema>): Promise<Template[]> {
+export async function getBuiltInTemplates(db: IDBPDatabase<DocForgioDBSchema>): Promise<Template[]> {
   return db.getAllFromIndex('templates', 'isBuiltIn', 'true');
 }
 
-export async function getUserTemplates(db: IDBPDatabase<FolioDBSchema>): Promise<Template[]> {
+export async function getUserTemplates(db: IDBPDatabase<DocForgioDBSchema>): Promise<Template[]> {
   return db.getAllFromIndex('templates', 'source', 'user');
 }
 
-export async function getCommunityTemplates(db: IDBPDatabase<FolioDBSchema>): Promise<Template[]> {
+export async function getCommunityTemplates(db: IDBPDatabase<DocForgioDBSchema>): Promise<Template[]> {
   return db.getAllFromIndex('templates', 'source', 'community');
 }
 
 // Asset operations
-export async function getAsset(db: IDBPDatabase<FolioDBSchema>, id: string): Promise<Asset | undefined> {
+export async function getAsset(db: IDBPDatabase<DocForgioDBSchema>, id: string): Promise<Asset | undefined> {
   return db.get('assets', id);
 }
 
 export async function getAssetsByDocument(
-  db: IDBPDatabase<FolioDBSchema>,
+  db: IDBPDatabase<DocForgioDBSchema>,
   documentId: string
 ): Promise<Asset[]> {
   return db.getAllFromIndex('assets', 'documentId', documentId);
 }
 
-export async function saveAsset(db: IDBPDatabase<FolioDBSchema>, asset: Asset): Promise<void> {
+export async function saveAsset(db: IDBPDatabase<DocForgioDBSchema>, asset: Asset): Promise<void> {
   await db.put('assets', asset);
 }
 
-export async function deleteAsset(db: IDBPDatabase<FolioDBSchema>, id: string): Promise<void> {
+export async function deleteAsset(db: IDBPDatabase<DocForgioDBSchema>, id: string): Promise<void> {
   await db.delete('assets', id);
 }
 
 // Settings operations
 export async function getSetting(
-  db: IDBPDatabase<FolioDBSchema>,
+  db: IDBPDatabase<DocForgioDBSchema>,
   key: string
 ): Promise<Settings | undefined> {
   return db.get('settings', key);
 }
 
-export async function getAllSettings(db: IDBPDatabase<FolioDBSchema>): Promise<Settings[]> {
+export async function getAllSettings(db: IDBPDatabase<DocForgioDBSchema>): Promise<Settings[]> {
   return db.getAll('settings');
 }
 
-export async function saveSetting(db: IDBPDatabase<FolioDBSchema>, setting: Settings): Promise<void> {
+export async function saveSetting(db: IDBPDatabase<DocForgioDBSchema>, setting: Settings): Promise<void> {
   await db.put('settings', setting);
 }
 
 export async function getSettingValue(
-  db: IDBPDatabase<FolioDBSchema>,
+  db: IDBPDatabase<DocForgioDBSchema>,
   key: string
 ): Promise<string | number | boolean | undefined> {
   const setting = await db.get('settings', key);
@@ -203,7 +203,7 @@ export async function getSettingValue(
 }
 
 export async function setSettingValue(
-  db: IDBPDatabase<FolioDBSchema>,
+  db: IDBPDatabase<DocForgioDBSchema>,
   key: string,
   value: string | number | boolean
 ): Promise<void> {
@@ -211,7 +211,7 @@ export async function setSettingValue(
 }
 
 // Storage quota utilities
-export async function getStorageUsage(db: IDBPDatabase<FolioDBSchema>): Promise<number> {
+export async function getStorageUsage(db: IDBPDatabase<DocForgioDBSchema>): Promise<number> {
   const assets = await db.getAll('assets');
   return assets.reduce((total, asset) => total + asset.sizeBytes, 0);
 }

@@ -1,13 +1,13 @@
-# Folio — Open Document Studio · PRD & SRS v0.1
+# DocForgio — Open Document Studio · PRD & SRS v0.1
 
 § 01 Executive Summary
 ----------------------
 
-**Folio** is a free, open-source, browser-native document composition studio. It runs entirely in the browser with zero backend infrastructure — no accounts, no servers, no subscriptions. All data lives in **IndexedDB**, portable via export at any time.
+**DocForgio** is a free, open-source, browser-native document composition studio. It runs entirely in the browser with zero backend infrastructure — no accounts, no servers, no subscriptions. All data lives in **IndexedDB**, portable via export at any time.
 
 The core experience is a **split-pane editor**: a visual no-code block editor on the left and a live-rendered preview on the right. Advanced users can flip to **Code Mode** — a full HTML/CSS editor with Tailwind v4 support — at any point without losing work. The two modes are fully bidirectional.
 
-Folio ships with **15+ professional-grade templates** spanning product documents, academic papers, legal instruments, screenplays, résumés, and more. A built-in **Template Builder** lets users design and package custom templates, exportable as `.folio` files for sharing with teams or the open-source community.
+DocForgio ships with **15+ professional-grade templates** spanning product documents, academic papers, legal instruments, screenplays, résumés, and more. A built-in **Template Builder** lets users design and package custom templates, exportable as `.docforgio` files for sharing with teams or the open-source community.
 
 > Imagine Notion's editor composability, combined with the export fidelity of a desktop publishing tool — running entirely in your browser tab, free, forever.
 
@@ -45,27 +45,27 @@ Most browser-based tools export PDFs that look nothing like the screen preview, 
 * User Segment: Product Managers
   * Current Tool: Notion / Google Docs
   * Pain: Zero design control; PRDs look generic
-  * Folio Benefit: Pro templates + live HTML export
+  * DocForgio Benefit: Pro templates + live HTML export
 * User Segment: Indie Developers
   * Current Tool: Markdown + raw HTML
   * Pain: Time-consuming; no visual feedback
-  * Folio Benefit: Code mode with live preview
+  * DocForgio Benefit: Code mode with live preview
 * User Segment: Students / Academics
   * Current Tool: Word / LaTeX
   * Pain: LaTeX complexity; Word formatting breaks
-  * Folio Benefit: APA/MLA templates, clean PDF output
+  * DocForgio Benefit: APA/MLA templates, clean PDF output
 * User Segment: Screenwriters
   * Current Tool: Final Draft ($250/yr)
   * Pain: Expensive; web sharing is poor
-  * Folio Benefit: Free screenplay template + HTML export
+  * DocForgio Benefit: Free screenplay template + HTML export
 * User Segment: HR / Legal Teams
   * Current Tool: Word + PDF converters
   * Pain: Broken formatting; manual reformatting
-  * Folio Benefit: Legal/contract templates, precise PDF
+  * DocForgio Benefit: Legal/contract templates, precise PDF
 * User Segment: Community Builders
   * Current Tool: Canva / Figma
   * Pain: Not text-document-native
-  * Folio Benefit: Template marketplace via .folio files
+  * DocForgio Benefit: Template marketplace via .docforgio files
 
 
 2.3 Why Now
@@ -151,7 +151,7 @@ Tailwind v4's browser-native CDN build is injected into the preview iframe. All 
 
 Mode Switching
 
-Toggle between No-Code ↔ Code via a persistent toolbar button. On switch to Code Mode, the current block state serialises to clean HTML. On switch back, Folio attempts a block parse; ambiguous HTML stays as Custom HTML blocks. **No work is ever lost.**
+Toggle between No-Code ↔ Code via a persistent toolbar button. On switch to Code Mode, the current block state serialises to clean HTML. On switch back, DocForgio attempts a block parse; ambiguous HTML stays as Custom HTML blocks. **No work is ever lost.**
 
 Panels
 
@@ -194,23 +194,23 @@ Converts block tree to CommonMark Markdown. Tables, headings, lists, code blocks
 
 JSON Backup
 
-Full document state as a portable `.json` file including blocks, CSS, metadata, asset references. Re-importable into any Folio instance.
+Full document state as a portable `.json` file including blocks, CSS, metadata, asset references. Re-importable into any DocForgio instance.
 
-.folio Archive
+.docforgio Archive
 
-A ZIP-like bundle (`document.json` + `assets/`) packaged as a `.folio` file. Can be imported, shared, and version-controlled. Intended as the primary share/backup format.
+A ZIP-like bundle (`document.json` + `assets/`) packaged as a `.docforgio` file. Can be imported, shared, and version-controlled. Intended as the primary share/backup format.
 
-15+ professionally designed, production-ready templates shipped with Folio. Accessible via the New Document modal with category filtering and preview thumbnails. Applying a template populates the editor with pre-structured blocks and styles — user fills in content.
+15+ professionally designed, production-ready templates shipped with DocForgio. Accessible via the New Document modal with category filtering and preview thumbnails. Applying a template populates the editor with pre-structured blocks and styles — user fills in content.
 
 Template Data
 
-Each bundled template is a static `.folio` JSON file in the repo. No network call required — templates are bundled at build time via Vite's `import.meta.glob`.
+Each bundled template is a static `.docforgio` JSON file in the repo. No network call required — templates are bundled at build time via Vite's `import.meta.glob`.
 
 Customisation
 
 After applying a template, all blocks are fully editable. Document-level settings (palette, fonts) can be changed without breaking the template structure.
 
-Any document can be promoted to a reusable template. The Template Builder adds metadata (name, category, description, thumbnail) and marks certain block fields as **placeholder slots** — visually differentiated regions the end-user fills in. Templates are exported as `.folio` files.
+Any document can be promoted to a reusable template. The Template Builder adds metadata (name, category, description, thumbnail) and marks certain block fields as **placeholder slots** — visually differentiated regions the end-user fills in. Templates are exported as `.docforgio` files.
 
 Save as Template
 
@@ -222,11 +222,11 @@ In No-Code mode, any block can be right-clicked → "Mark as Template Slot". Slo
 
 Export Format
 
-`my-template.folio` — importable by drag-drop onto the Folio window or via "Import Template" in Settings. Template file naming convention: `{slug}.folio` (e.g. `x-corp-prd-template.folio`)
+`my-template.docforgio` — importable by drag-drop onto the DocForgio window or via "Import Template" in Settings. Template file naming convention: `{slug}.docforgio` (e.g. `x-corp-prd-template.docforgio`)
 
 Community Sharing
 
-Folio's GitHub repo hosts a `/community-templates` directory. Users submit PRs with their `.folio` files. Merged templates appear in a "Community" tab in the template picker (loaded via GitHub raw CDN — optional, gracefully degrades offline).
+Folio's GitHub repo hosts a `/community-templates` directory. Users submit PRs with their `.docforgio` files. Merged templates appear in a "Community" tab in the template picker (loaded via GitHub raw CDN — optional, gracefully degrades offline).
 
 All user data lives exclusively in the browser's IndexedDB. No network calls for document storage. A home-screen Document Manager lists all saved documents with title, last-modified date, template used, and a thumbnail.
 
@@ -240,7 +240,7 @@ Create, Rename, Duplicate, Delete, Export, Open. Version history (last 10 snapsh
 
 Storage Quota
 
-IndexedDB quota varies by browser (~60% of available disk). Folio shows a storage usage indicator. Warn at 80% quota. Asset images stored as ArrayBuffers; automatic suggestion to externally host large images.
+IndexedDB quota varies by browser (~60% of available disk). DocForgio shows a storage usage indicator. Warn at 80% quota. Asset images stored as ArrayBuffers; automatic suggestion to externally host large images.
 
 A `Cmd/Ctrl + K` command palette for all actions. Full keyboard navigation in No-Code mode. Power users never need the mouse.
 
@@ -290,7 +290,7 @@ Key Shortcuts
   * Priority: P0
 * #: US-08
   * As a…: Any user
-  * I want to…: export and later re-import my document as a .folio file
+  * I want to…: export and later re-import my document as a .docforgio file
   * So that…: I can back up or transfer my work
   * Priority: P0
 * #: US-09
@@ -300,7 +300,7 @@ Key Shortcuts
   * Priority: P1
 * #: US-10
   * As a…: Any user
-  * I want to…: share a .folio template file with my colleague
+  * I want to…: share a .docforgio template file with my colleague
   * So that…: we maintain brand consistency without a shared account
   * Priority: P1
 * #: US-11
@@ -310,7 +310,7 @@ Key Shortcuts
   * Priority: P0
 * #: US-12
   * As a…: Developer (Kenji)
-  * I want to…: submit my custom template to the Folio community repo via a pull request
+  * I want to…: submit my custom template to the DocForgio community repo via a pull request
   * So that…: others can discover and use my work
   * Priority: P2
 
@@ -352,7 +352,7 @@ Key Shortcuts
 7.1 Architecture Philosophy
 ---------------------------
 
-Folio is a **pure Single-Page Application (SPA)**. There is no backend, no API, no authentication service, and no server-side rendering. All computation, storage, and rendering happens in the user's browser tab. The deployment artifact is a static bundle of HTML + JS + CSS files deployable to any CDN (Netlify, Vercel, GitHub Pages, or self-hosted nginx).
+DocForgio is a **pure Single-Page Application (SPA)**. There is no backend, no API, no authentication service, and no server-side rendering. All computation, storage, and rendering happens in the user's browser tab. The deployment artifact is a static bundle of HTML + JS + CSS files deployable to any CDN (Netlify, Vercel, GitHub Pages, or self-hosted nginx).
 
 **Design constraint:** Any feature that requires a Node.js runtime, server process, or external API call is out of scope for v1.0. The one exception is the optional community templates CDN fetch — which is non-blocking and gracefully degrades to offline mode.
 
@@ -375,7 +375,7 @@ Folio is a **pure Single-Page Application (SPA)**. There is no backend, no API, 
   * Responsibility: Document CRUD, template storage, settings, version snapshots, asset blobs
 * Layer: Export Engine
   * Technology: html2canvas + jsPDF + custom serializers
-  * Responsibility: HTML, PDF, Markdown, JSON, .folio format generation
+  * Responsibility: HTML, PDF, Markdown, JSON, .docforgio format generation
 * Layer: Template System
   * Technology: Static JSON bundles + idb user store
   * Responsibility: Bundled templates (build-time) + user/community templates (runtime)
@@ -437,7 +437,7 @@ User interaction in the editor triggers a **command dispatch** into the `EditorS
 * Layer: File Packaging
   * Package / Tool: jszip
   * Version: ^3.x
-  * Rationale: Browser-native ZIP creation for .folio archive format; no Node.js fs dependency
+  * Rationale: Browser-native ZIP creation for .docforgio archive format; no Node.js fs dependency
 * Layer: Icon System
   * Package / Tool: lucide-react
   * Version: ^0.4x
@@ -463,7 +463,7 @@ User interaction in the editor triggers a **command dispatch** into the `EditorS
 § 09 Data Models — IndexedDB Schema
 -----------------------------------
 
-The application uses four IndexedDB object stores, managed by the `idb` library. The database name is `folio-db`, initial version `1`. All stores use auto-generated UUIDs as primary keys unless specified.
+The application uses four IndexedDB object stores, managed by the `idb` library. The database name is `docforgio-db`, initial version `1`. All stores use auto-generated UUIDs as primary keys unless specified.
 
 
 |Field     |Type             |Description                                           |Index|
@@ -639,7 +639,7 @@ Each block in the `blocks[]` array conforms to the following discriminated union
 * Component: PreviewPane
   * Children / Notes: PreviewIframe (srcdoc); PreviewToolbar (page size, zoom, mode); ClickToSelectBridge
 * Component: ExportModal
-  * Children / Notes: FormatTabs (HTML/PDF/MD/JSON/.folio); FormatSettingsPanel; ExportProgressToast
+  * Children / Notes: FormatTabs (HTML/PDF/MD/JSON/.docforgio); FormatSettingsPanel; ExportProgressToast
 * Component: CommandPalette
   * Children / Notes: Cmdk overlay; unified search across actions, blocks, docs, templates
 
@@ -712,11 +712,11 @@ Each block in the `blocks[]` array conforms to the following discriminated union
 § 12 Bundled Template Catalogue
 -------------------------------
 
-All templates below ship with Folio's initial release as static `.folio` JSON files. Each template includes: pre-structured blocks, bundled CSS variables, Google Fonts references, and thumbnail previews.
+All templates below ship with Folio's initial release as static `.docforgio` JSON files. Each template includes: pre-structured blocks, bundled CSS variables, Google Fonts references, and thumbnail previews.
 
 Corporate PRD
 
-Full product requirements document with cover, exec summary, personas, feature tables, KPI dashboard, and roadmap. The reference implementation for Folio itself.
+Full product requirements document with cover, exec summary, personas, feature tables, KPI dashboard, and roadmap. The reference implementation for DocForgio itself.
 
 Software Requirements Spec (SRS)
 
@@ -823,17 +823,17 @@ Formal offer letter with compensation, start date, benefits, and e-signature lin
   * Default: Print API
 
 
-13.3 .folio File Format
+13.3 .docforgio File Format
 -----------------------
 
-A `.folio` file is a ZIP archive (DEFLATE compression) with the following internal structure:
+A `.docforgio` file is a ZIP archive (DEFLATE compression) with the following internal structure:
 
-*   `manifest.json` — format version, Folio app version, export timestamp
+*   `manifest.json` — format version, DocForgio app version, export timestamp
 *   `document.json` — full document object (blocks, CSS, meta, settings)
 *   `assets/` — directory of binary assets (images etc.) referenced by asset ID filenames
 *   `thumbnail.png` — optional first-page preview thumbnail
 
-The `.folio` extension is registered as a custom MIME type `application/x-folio` in the app's manifest for file association on supported OSes.
+The `.docforgio` extension is registered as a custom MIME type `application/x-docforgio` in the app's manifest for file association on supported OSes.
 
 § 14 Development Roadmap
 ------------------------
@@ -906,7 +906,7 @@ S-08
 
 Templates II
 
-Remaining 9 bundled templates; Template Builder UI; Slot marking; Export/import .folio template files; jszip integration
+Remaining 9 bundled templates; Template Builder UI; Slot marking; Export/import .docforgio template files; jszip integration
 
 MVP
 
@@ -948,7 +948,7 @@ Post-MVP
 15.1 License
 ------------
 
-Folio is released under the **MIT License**. All bundled templates, including community-submitted ones, are released under **Creative Commons CC0 1.0** (public domain) to maximise reuse without attribution requirements.
+DocForgio is released under the **MIT License**. All bundled templates, including community-submitted ones, are released under **Creative Commons CC0 1.0** (public domain) to maximise reuse without attribution requirements.
 
 15.2 Repository Structure
 -------------------------
@@ -957,18 +957,18 @@ Folio is released under the **MIT License**. All bundled templates, including co
 |Path                  |Description                                                     |
 |----------------------|----------------------------------------------------------------|
 |/src                  |Application source (React components, stores, utilities)        |
-|/src/templates/builtin|All 15+ bundled .folio JSON template files                      |
-|/community-templates  |Community-contributed .folio files (PR-reviewed)                |
+|/src/templates/builtin|All 15+ bundled .docforgio JSON template files                      |
+|/community-templates  |Community-contributed .docforgio files (PR-reviewed)                |
 |/docs                 |Contributing guide, template authoring guide, architecture notes|
 |/.github/workflows    |Lighthouse CI, bundle size check, deploy pipeline               |
-|TEMPLATE_GUIDE.md     |How to build and submit a Folio template                        |
+|TEMPLATE_GUIDE.md     |How to build and submit a DocForgio template                        |
 
 
 15.3 Community Template Submission Flow
 ---------------------------------------
 
-1.  User builds template in Folio, exports as `my-template.folio`
-2.  User forks the Folio GitHub repo, places file in `/community-templates/`
+1.  User builds template in Folio, exports as `my-template.docforgio`
+2.  User forks the DocForgio GitHub repo, places file in `/community-templates/`
 3.  User opens a PR with a title, screenshot, and category declaration
 4.  Maintainer reviews for quality, safety, and schema validity (CI auto-validates)
 5.  Merged templates are available via the Community tab in Folio's template picker (fetched from GitHub raw CDN, cached in IndexedDB, works offline after first load)
@@ -990,7 +990,7 @@ No-Code and Code modes are fully bidirectional without data loss. This is techni
 
 Template as File
 
-The .folio template portability model sidesteps the need for a backend marketplace. A single file contains the full template — shareable via Slack, GitHub, email, or USB drive.
+The .docforgio template portability model sidesteps the need for a backend marketplace. A single file contains the full template — shareable via Slack, GitHub, email, or USB drive.
 
 § 16 Open Questions & Decisions Needed
 --------------------------------------
@@ -1014,7 +1014,7 @@ The .folio template portability model sidesteps the need for a backend marketpla
   * Options: A) Drop styling, export content-only B) Wrap in HTML comment C) Export as raw HTML blocks
   * Recommendation: Recommend: Export as raw HTML blocks (C). Pure Markdown purity is sacrificed for fidelity — users requesting MD likely accept this.
 * #: OQ-05
-  * Question: Should Folio support real-time collaboration via CRDTs?
+  * Question: Should DocForgio support real-time collaboration via CRDTs?
   * Options: A) Not in v1.0 B) WebRTC P2P with Yjs CRDT C) Server-required (out of scope)
   * Recommendation: Recommend: Out of scope for v1.0. Yjs P2P (WebRTC) in v1.2 roadmap — this keeps the "no server" constraint intact.
 * #: OQ-06

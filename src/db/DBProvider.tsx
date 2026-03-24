@@ -1,9 +1,9 @@
 import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { IDBPDatabase } from 'idb';
-import { FolioDBSchema, initDB } from './index';
+import { DocForgioDBSchema, initDB } from './index';
 
 interface DBContextType {
-  db: IDBPDatabase<FolioDBSchema> | null;
+  db: IDBPDatabase<DocForgioDBSchema> | null;
   initialized: boolean;
   error: Error | null;
 }
@@ -15,7 +15,7 @@ const DBContext = createContext<DBContextType>({
 });
 
 export function DBProvider({ children }: { children: ReactNode }) {
-  const [db, setDb] = useState<IDBPDatabase<FolioDBSchema> | null>(null);
+  const [db, setDb] = useState<IDBPDatabase<DocForgioDBSchema> | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 

@@ -34,7 +34,7 @@ export function HomePage() {
               <FileText className="w-[18px] h-[18px]" />
             </div>
             <div>
-              <p className="text-sm font-extrabold tracking-tight text-surface-900 dark:text-surface-100 leading-none">Folio</p>
+              <p className="text-sm font-extrabold tracking-tight text-surface-900 dark:text-surface-100 leading-none">DocForgio</p>
               <p className="text-[11px] text-surface-400 leading-none mt-0.5">Open document studio</p>
             </div>
           </div>

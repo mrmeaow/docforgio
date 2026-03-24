@@ -4,6 +4,68 @@ import { type ExportFormat, PAGE_SIZES, type PageSize, type BlockStyle, type Blo
 import { X, FileText, Code, FileJson, Archive, FileDown, Check } from 'lucide-react';
 import JSZip from 'jszip';
 
+const HIGHLIGHTJS_VERSION = '11.11.1';
+const MERMAID_VERSION = '11.13.0';
+
+function hasMermaidBlock(blocks: Block[]): boolean {
+  for (const block of blocks) {
+    if (block.type === 'code' && (block.props as CodeProps).language?.toLowerCase() === 'mermaid') return true;
+    if (block.children && hasMermaidBlock(block.children)) return true;
+  }
+  return false;
+}
+
+function getCodeHighlightHead(theme: 'light' | 'dark', hasMermaid: boolean): string {
+  const hljsTheme = theme === 'dark' ? 'github-dark.min.css' : 'github.min.css';
+  let head = `<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@${HIGHLIGHTJS_VERSION}/build/styles/${hljsTheme}">`;
+  head += `\n<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@${HIGHLIGHTJS_VERSION}/build/highlight.min.js"></script>`;
+  if (hasMermaid) {
+    head += `\n<script src="https://cdn.jsdelivr.net/npm/mermaid@${MERMAID_VERSION}/dist/mermaid.min.js"></script>`;
+  }
+  return head;
+}
+
+function getCodeHighlightScript(hasMermaid: boolean): string {
+  let script = `<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('pre code:not(.language-mermaid)').forEach(function(el) {
+    if (!el.dataset.highlighted) {
+      hljs.highlightElement(el);
+      el.dataset.highlighted = 'true';
+    }
+  });
+`;
+  if (hasMermaid) {
+    script += `
+  mermaid.initialize({ startOnLoad: false, theme: 'dark', fontFamily: "'JetBrains Mono', monospace" });
+  var mermaidBlocks = document.querySelectorAll('pre.language-mermaid');
+  if (mermaidBlocks.length > 0) {
+    var id = 0;
+    mermaidBlocks.forEach(function(block) {
+      var codeEl = block.querySelector('code') || block;
+      var definition = codeEl.textContent;
+      var container = document.createElement('div');
+      container.className = 'mermaid-diagram';
+      container.style.background = 'white';
+      container.style.padding = '1rem';
+      container.style.borderRadius = '0.5rem';
+      container.style.margin = '0.5rem 0';
+      container.style.overflowX = 'auto';
+      mermaid.render('mermaid-export-' + (id++), definition).then(function(result) {
+        container.innerHTML = result.svg;
+        block.parentNode.replaceChild(container, block);
+      }).catch(function(err) {
+        container.innerHTML = '<pre style="color:red;">Mermaid Error: ' + err.message + '</pre>';
+        block.parentNode.replaceChild(container, block);
+      });
+    });
+  }
+`;
+  }
+  script += `});\n</script>`;
+  return script;
+}
+
 interface ExportModalProps {
   onClose: () => void;
 }
@@ -23,7 +85,7 @@ export function ExportModal({ onClose }: ExportModalProps) {
     { id: 'html', label: 'HTML', icon: Code, desc: 'Self-contained file' },
     { id: 'markdown', label: 'Markdown', icon: FileText, desc: 'CommonMark format' },
     { id: 'json', label: 'JSON', icon: FileJson, desc: 'Full document state' },
-    { id: 'folio', label: '.folio', icon: Archive, desc: 'Portable ZIP archive' },
+    { id: 'docforgio', label: '.docforgio', icon: Archive, desc: 'Portable ZIP archive' },
   ];
 
   const handleExport = async () => {
@@ -59,7 +121,7 @@ export function ExportModal({ onClose }: ExportModalProps) {
         }
         break;
       }
-      case 'folio': {
+      case 'docforgio': {
         const doc = getCurrentDocument();
         const zip = new JSZip();
         zip.file('manifest.json', JSON.stringify({
@@ -76,7 +138,7 @@ export function ExportModal({ onClose }: ExportModalProps) {
           settings: doc?.settings || {},
         }, null, 2));
         const blob = await zip.generateAsync({ type: 'blob' });
-        downloadBlob(`${title}.folio`, blob);
+        downloadBlob(`${title}.docforgio`, blob);
         break;
       }
     }
@@ -116,6 +178,10 @@ export function ExportModal({ onClose }: ExportModalProps) {
     ];
     if (pageBackground) bodyStyles.push(`background: ${pageBackground}`);
 
+    const hasMermaid = hasMermaidBlock(blocks);
+    const codeHighlightHead = getCodeHighlightHead('dark', hasMermaid);
+    const codeHighlightScript = getCodeHighlightScript(hasMermaid);
+
     if (mode === 'code') {
       return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${doc?.title || 'Document'}</title>
 <style>
@@ -139,9 +205,23 @@ export function ExportModal({ onClose }: ExportModalProps) {
   .cover p { font-size: 1.125rem; color: #6b7280; margin-top: 0.5rem; }
   .cover .author, .cover .date { font-size: 0.875rem; color: #9ca3af; }
   .page-break { page-break-after: always; }
+  pre { background: #1e1e2e; color: #cdd6f4; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; font-size: 0.85em; line-height: 1.5; color: #cdd6f4; }
+  pre.language-mermaid { background: #1e1e2e; border: 1px solid #313244; }
+  code { font-family: 'JetBrains Mono', monospace; font-size: 0.875em; }
+  :not(pre) > code { background: rgba(49,50,68,0.6); color: #cba6f7; padding: 0.2em 0.4em; border-radius: 0.25rem; }
+  .mermaid-diagram { background: #1e1e2e; padding: 1rem; border-radius: 0.5rem; margin: 0.5rem 0; overflow-x: auto; border: 1px solid #313244; }
+  .mermaid-diagram svg { max-width: 100%; }
+  code { font-family: 'JetBrains Mono', monospace; font-size: 0.875em; }
+  :not(pre) > code { background: rgba(175,184,193,0.2); padding: 0.2em 0.4em; border-radius: 0.25rem; }
+  .mermaid-diagram { background: white; padding: 1rem; border-radius: 0.5rem; margin: 0.5rem 0; overflow-x: auto; border: 1px solid #e5e7eb; }
+  .hljs { background: transparent !important; }
   ${cssSource}
   ${customCss}
-</style>${headSource}</head><body${pageStyleAttr}>${htmlSource}</body></html>`;
+</style>
+${codeHighlightHead}
+${headSource}</head><body${pageStyleAttr}>${htmlSource}
+${codeHighlightScript}</body></html>`;
     }
 
     const blocksHtml = blocks.map(b => blockToSimpleHtml(b)).join('\n');
@@ -169,21 +249,32 @@ export function ExportModal({ onClose }: ExportModalProps) {
   .cover h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; }
   .cover p { font-size: 1.125rem; color: #6b7280; margin-top: 0.5rem; }
   .cover .author, .cover .date { font-size: 0.875rem; color: #9ca3af; }
-  .callout { padding: 1rem; border-radius: 0.5rem; border-left: 4px solid; margin: 0.5rem 0; }
-  .callout-info { background: #eff6ff; border-color: #3b82f6; }
-  .callout-warning { background: #fffbeb; border-color: #f59e0b; }
-  .callout-error { background: #fef2f2; border-color: #ef4444; }
-  .callout-success { background: #f0fdf4; border-color: #22c55e; }
+  .callout { padding: 1rem 1rem 1rem 0.75rem; border-radius: 0.5rem; border-left: 4px solid; margin: 0.5rem 0; }
+  .callout-title { font-weight: 700; font-size: 0.85em; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.4rem; }
+  .callout-note { background: #dbeafe; border-color: #3b82f6; color: #1e40af; }
+  .callout-tip { background: #dcfce7; border-color: #22c55e; color: #166534; }
+  .callout-important { background: #f3e8ff; border-color: #a855f7; color: #6b21a8; }
+  .callout-warning { background: #fef9c3; border-color: #eab308; color: #854d0e; }
+  .callout-caution { background: #fee2e2; border-color: #ef4444; color: #991b1b; }
   table { width: 100%; border-collapse: collapse; }
   th, td { border: 1px solid #e5e7eb; padding: 0.5rem; text-align: left; }
   th { background: #f9fafb; }
-  pre { background: #1f2937; color: #f3f4f6; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+  pre { background: #1e1e2e; color: #cdd6f4; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; font-size: 0.85em; line-height: 1.5; color: #cdd6f4; }
+  pre.language-mermaid { background: #1e1e2e; border: 1px solid #313244; }
+  code { font-family: 'JetBrains Mono', monospace; font-size: 0.875em; }
+  :not(pre) > code { background: rgba(49,50,68,0.6); color: #cba6f7; padding: 0.2em 0.4em; border-radius: 0.25rem; }
+  .mermaid-diagram { background: #1e1e2e; padding: 1rem; border-radius: 0.5rem; margin: 0.5rem 0; overflow-x: auto; border: 1px solid #313244; }
+  .mermaid-diagram svg { max-width: 100%; }
   .columns-2, .columns-3 { display: grid; gap: 1rem; }
   .columns-2 { grid-template-columns: 1fr 1fr; }
   .columns-3 { grid-template-columns: 1fr 1fr 1fr; }
   ${cssSource}
   ${customCss}
-</style></head><body><div class="page"${pageStyleAttr}>${blocksHtml}</div></body></html>`;
+</style>
+${codeHighlightHead}
+${headSource}</head><body><div class="page"${pageStyleAttr}>${blocksHtml}
+${codeHighlightScript}</div></body></html>`;
   };
 
   return (
@@ -371,10 +462,18 @@ function blockToSimpleHtml(block: Block): string {
     }
     case 'callout': {
       const p = block.props as CalloutProps;
-      return `<div class="callout callout-${p.variant}"${attrs}><p>${escapeHtml(p.text)}</p></div>`;
+      const icons: Record<string, string> = { note: 'ℹ', tip: '✓', important: '◆', warning: '⚠', caution: '✕' };
+      const labels: Record<string, string> = { note: 'Note', tip: 'Tip', important: 'Important', warning: 'Warning', caution: 'Caution' };
+      const icon = icons[p.variant] || icons.note;
+      const label = labels[p.variant] || labels.note;
+      return `<div class="callout callout-${p.variant}"${attrs}><div class="callout-title">${icon} ${label}</div><p>${escapeHtml(p.text)}</p></div>`;
     }
     case 'code': {
       const p = block.props as CodeProps;
+      const lang = p.language?.toLowerCase() || '';
+      if (lang === 'mermaid') {
+        return `<pre class="language-mermaid"${attrs}><code class="language-mermaid">${escapeHtml(p.code)}</code></pre>`;
+      }
       return `<pre${attrs}><code class="language-${escapeHtml(p.language)}">${escapeHtml(p.code)}</code></pre>`;
     }
     case 'divider': return `<hr${attrs} />`;
@@ -408,7 +507,7 @@ function blocksToMarkdown(blocks: any[]): string {
       case 'code': return `\`\`\`${b.props.language}\n${b.props.code}\n\`\`\``;
       case 'list': return b.props.items.map((i: any) => `- ${i.text}`).join('\n');
       case 'divider': return '---';
-      case 'callout': return `> **${b.props.variant.toUpperCase()}:** ${b.props.text}`;
+      case 'callout': return `> [!${b.props.variant}]\n> ${b.props.text}`;
       case 'image': return `![${b.props.alt}](${b.props.src})`;
       case 'table': {
         const rows = b.props.rows;

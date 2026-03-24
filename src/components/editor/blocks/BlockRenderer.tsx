@@ -405,34 +405,43 @@ function ListBlock({ block }: { block: Block }) {
 function CalloutBlock({ block }: { block: Block }) {
   const { updateBlockProps } = useEditorStore();
   const props = block.props as CalloutProps;
-  const variants: Record<string, { bg: string; border: string; icon: string }> = {
-    info: { bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-300 dark:border-blue-700', icon: 'ℹ' },
-    warning: { bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-300 dark:border-amber-700', icon: '⚠' },
-    error: { bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-300 dark:border-red-700', icon: '✕' },
-    success: { bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-300 dark:border-green-700', icon: '✓' },
+
+  const variants: Record<string, { bg: string; border: string; icon: string; label: string }> = {
+    note: { bg: 'bg-blue-50 dark:bg-blue-950/40', border: 'border-blue-500', icon: 'ℹ', label: 'Note' },
+    tip: { bg: 'bg-green-50 dark:bg-green-950/40', border: 'border-green-500', icon: '✓', label: 'Tip' },
+    important: { bg: 'bg-purple-50 dark:bg-purple-950/40', border: 'border-purple-500', icon: '◆', label: 'Important' },
+    warning: { bg: 'bg-yellow-50 dark:bg-yellow-950/40', border: 'border-yellow-500', icon: '⚠', label: 'Warning' },
+    caution: { bg: 'bg-red-50 dark:bg-red-950/40', border: 'border-red-500', icon: '✕', label: 'Caution' },
   };
-  const v = variants[props.variant] || variants.info;
+  const v = variants[props.variant] || variants.note;
 
   return (
-    <div className={`${v.bg} border-l-4 ${v.border} rounded-r-lg p-3 flex items-start gap-2`}>
-      <span className="text-sm mt-0.5 select-none">{v.icon}</span>
-      <textarea
-        value={props.text}
-        onChange={(e) => updateBlockProps(block.id, { text: e.target.value })}
-        className="flex-1 bg-transparent border-0 outline-none resize-none text-sm text-surface-700 dark:text-surface-300 placeholder-surface-400 min-h-[2em]"
-        placeholder="Write a callout..."
-        rows={Math.max(1, Math.ceil(props.text.length / 60))}
-      />
-      <select
-        value={props.variant}
-        onChange={(e) => updateBlockProps(block.id, { variant: e.target.value })}
-        className="bg-transparent border-0 outline-none text-xs text-surface-400 cursor-pointer"
-      >
-        <option value="info">Info</option>
-        <option value="warning">Warning</option>
-        <option value="error">Error</option>
-        <option value="success">Success</option>
-      </select>
+    <div className={`${v.bg} border-l-4 ${v.border} rounded-r-lg overflow-hidden`}>
+      <div className="flex items-start gap-2 px-3 pt-3">
+        <span className="text-sm mt-0.5 select-none font-bold">{v.icon}</span>
+        <textarea
+          value={props.text}
+          onChange={(e) => updateBlockProps(block.id, { text: e.target.value })}
+          className="flex-1 bg-transparent border-0 outline-none resize-none text-sm text-surface-800 dark:text-surface-200 placeholder-surface-400 min-h-[2em]"
+          placeholder="Write a callout..."
+          rows={Math.max(1, Math.ceil(props.text.length / 60))}
+        />
+      </div>
+      <div className="flex items-center gap-1 px-3 pb-2 pt-1 ml-6">
+        {Object.entries(variants).map(([key, val]) => (
+          <button
+            key={key}
+            onClick={() => updateBlockProps(block.id, { variant: key })}
+            className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors ${
+              props.variant === key
+                ? `${val.bg} ${val.border} border text-surface-800 dark:text-surface-200`
+                : 'text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700/50'
+            }`}
+          >
+            {val.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -441,21 +450,35 @@ function CodeBlockContent({ block }: { block: Block }) {
   const { updateBlockProps } = useEditorStore();
   const props = block.props as CodeProps;
 
+  const languages = [
+    'javascript', 'typescript', 'python', 'java', 'c', 'cpp', 'csharp',
+    'go', 'rust', 'ruby', 'php', 'swift', 'kotlin', 'scala',
+    'html', 'css', 'scss', 'xml', 'json', 'yaml', 'toml',
+    'sql', 'bash', 'shell', 'powershell', 'dockerfile',
+    'markdown', 'plaintext', 'mermaid',
+  ];
+
+  const isCustomLang = props.language && !languages.includes(props.language.toLowerCase());
+
   return (
     <div className="rounded-lg overflow-hidden">
       <div className="flex items-center justify-between bg-surface-800 dark:bg-surface-900 px-3 py-1.5">
-        <input
-          value={props.language}
+        <select
+          value={languages.includes(props.language?.toLowerCase()) ? props.language.toLowerCase() : 'plaintext'}
           onChange={(e) => updateBlockProps(block.id, { language: e.target.value })}
-          className="bg-transparent border-0 outline-none text-xs text-surface-400 uppercase font-mono placeholder-surface-600 w-24"
-          placeholder="language..."
-        />
+          className="bg-transparent border-0 outline-none text-xs text-surface-400 uppercase font-mono cursor-pointer"
+        >
+          {isCustomLang && <option value={props.language.toLowerCase()}>{props.language}</option>}
+          {languages.map(lang => (
+            <option key={lang} value={lang}>{lang}</option>
+          ))}
+        </select>
       </div>
       <textarea
         value={props.code}
         onChange={(e) => updateBlockProps(block.id, { code: e.target.value })}
         className="w-full bg-surface-900 dark:bg-surface-950 border-0 outline-none resize-none text-sm text-surface-100 font-mono p-4 leading-relaxed placeholder-surface-600 min-h-[6em]"
-        placeholder="Paste your code here..."
+        placeholder={props.language?.toLowerCase() === 'mermaid' ? 'graph TD;\n  A-->B;' : 'Paste your code here...'}
         rows={Math.max(4, props.code.split('\n').length + 1)}
         spellCheck={false}
       />
