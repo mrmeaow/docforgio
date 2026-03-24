@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import type { Block, HeadingProps, ParagraphProps, ImageProps, TableProps, ListProps, CalloutProps, CodeProps, DividerProps, ColumnsProps, CoverProps, HtmlProps } from '../../../types';
+import type { Block, HeadingProps, ParagraphProps, ImageProps, TableProps, ListProps, CalloutProps, CodeProps, DividerProps, ColumnsProps, CoverProps, HtmlProps, SpacerProps, WrapperProps, PageDividerProps } from '../../../types';
 import { useEditorStore } from '../../../stores';
 import { generateId } from '../../../utils/id';
 import { GripVertical, Trash2, Copy, Plus, Minus, ChevronUp, ChevronDown } from 'lucide-react';
@@ -14,10 +14,68 @@ export function BlockRenderer({ block }: BlockRendererProps) {
   const isSelected = selectedBlockId === block.id;
   const index = blocks.findIndex((b: Block) => b.id === block.id);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [dropPosition, setDropPosition] = useState<'top' | 'bottom' | null>(null);
+  const blockRef = useRef<HTMLDivElement>(null);
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('text/plain', block.id);
+    e.dataTransfer.effectAllowed = 'move';
+    // Slightly transparent ghost
+    const el = blockRef.current;
+    if (el) {
+      const ghost = el.cloneNode(true) as HTMLElement;
+      ghost.style.opacity = '0.6';
+      ghost.style.width = el.offsetWidth + 'px';
+      document.body.appendChild(ghost);
+      e.dataTransfer.setDragImage(ghost, 20, 20);
+      requestAnimationFrame(() => document.body.removeChild(ghost));
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const rect = blockRef.current?.getBoundingClientRect();
+    if (rect) {
+      const midY = rect.top + rect.height / 2;
+      setDropPosition(e.clientY < midY ? 'top' : 'bottom');
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDropPosition(null);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDropPosition(null);
+    const draggedId = e.dataTransfer.getData('text/plain');
+    if (!draggedId || draggedId === block.id) return;
+
+    const rect = blockRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const midY = rect.top + rect.height / 2;
+    const draggedIndex = blocks.findIndex((b: Block) => b.id === draggedId);
+    let targetIndex = index;
+
+    if (e.clientY < midY) {
+      // Drop above this block
+      targetIndex = draggedIndex < index ? index - 1 : index;
+    } else {
+      // Drop below this block
+      targetIndex = draggedIndex < index ? index : index + 1;
+    }
+
+    if (draggedIndex !== targetIndex) {
+      moveBlock(draggedId, targetIndex);
+    }
+  };
 
   return (
     <>
     <div
+      ref={blockRef}
       className={`group relative rounded-xl transition-all duration-150 ${
         isSelected
           ? 'ring-2 ring-brand-500/50 bg-brand-50/40 dark:bg-brand-900/15 shadow-sm'
@@ -28,12 +86,28 @@ export function BlockRenderer({ block }: BlockRendererProps) {
         e.preventDefault();
         setContextMenu({ x: e.clientX, y: e.clientY });
       }}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
+      {/* Drop indicator lines */}
+      {dropPosition === 'top' && (
+        <div className="absolute -top-0.5 left-2 right-2 h-1 bg-brand-500 rounded-full z-10" />
+      )}
+      {dropPosition === 'bottom' && (
+        <div className="absolute -bottom-0.5 left-2 right-2 h-1 bg-brand-500 rounded-full z-10" />
+      )}
+
       {/* Drag handle — left side */}
       <div className={`absolute -left-7 top-3 flex flex-col gap-0.5 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-        <button className="p-1 rounded-lg hover:bg-surface-200/80 dark:hover:bg-surface-700 text-surface-300 dark:text-surface-600 cursor-grab active:cursor-grabbing transition-colors" title="Drag to reorder">
+        <div
+          draggable
+          onDragStart={handleDragStart}
+          className="p-1 rounded-lg hover:bg-surface-200/80 dark:hover:bg-surface-700 text-surface-300 dark:text-surface-600 cursor-grab active:cursor-grabbing transition-colors"
+          title="Drag to reorder"
+        >
           <GripVertical className="w-4 h-4" />
-        </button>
+        </div>
       </div>
 
       {/* Action buttons — right side */}
@@ -97,220 +171,372 @@ function BlockContent({ block }: { block: Block }) {
     case 'pagebreak': return <PageBreakBlock />;
     case 'cover': return <CoverBlock block={block} />;
     case 'html': return <HtmlBlock block={block} />;
-    default: return <div className="text-surface-400 italic text-sm">Unknown block type</div>;
+    case 'spacer': return <SpacerBlock block={block} />;
+    case 'wrapper': return <WrapperBlock block={block} />;
+    case 'pageDivider': return <PageDividerBlock block={block} />;
+    default: return <div className="text-sm text-surface-400">Unknown block type</div>;
   }
 }
 
+// ---- Block Components ----
+
 function HeadingBlock({ block }: { block: Block }) {
-  const props = block.props as HeadingProps;
   const { updateBlockProps } = useEditorStore();
+  const props = block.props as HeadingProps;
+  const tags: Record<number, string> = { 1: 'text-3xl', 2: 'text-2xl', 3: 'text-xl', 4: 'text-lg' };
+
   return (
     <div className="flex items-start gap-2">
-      <select
-        value={props.level}
-        onChange={(e) => updateBlockProps(block.id, { level: Number(e.target.value) })}
-        className="w-14 text-[11px] font-bold bg-surface-100 dark:bg-surface-800 border-0 rounded-lg px-2 py-1 text-surface-500 dark:text-surface-400 cursor-pointer hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
-      >
-        <option value="1">H1</option><option value="2">H2</option><option value="3">H3</option><option value="4">H4</option>
-      </select>
       <input
-        type="text"
         value={props.text}
         onChange={(e) => updateBlockProps(block.id, { text: e.target.value })}
-        className={`flex-1 bg-transparent border-0 outline-none font-bold text-surface-900 dark:text-surface-100 placeholder-surface-300 dark:placeholder-surface-600 ${
-          props.level === 1 ? 'text-3xl tracking-tight' : props.level === 2 ? 'text-2xl tracking-tight' : props.level === 3 ? 'text-xl' : 'text-lg'
-        }`}
-        placeholder="Heading text..."
+        className={`flex-1 bg-transparent border-0 outline-none font-bold text-surface-900 dark:text-surface-100 placeholder-surface-400 ${tags[props.level] || 'text-xl'}`}
+        placeholder={`Heading ${props.level}...`}
       />
+      <select
+        value={props.level}
+        onChange={(e) => updateBlockProps(block.id, { level: parseInt(e.target.value) })}
+        className="bg-surface-100 dark:bg-surface-700 border-0 rounded-lg px-2 py-1 text-xs font-semibold text-surface-500 dark:text-surface-400 outline-none cursor-pointer"
+      >
+        {[1, 2, 3, 4].map(l => <option key={l} value={l}>H{l}</option>)}
+      </select>
     </div>
   );
 }
 
 function ParagraphBlock({ block }: { block: Block }) {
-  const props = block.props as ParagraphProps;
   const { updateBlockProps } = useEditorStore();
-  const ref = useRef<HTMLTextAreaElement>(null);
-  const handleInput = () => {
-    if (ref.current) {
-      ref.current.style.height = 'auto';
-      ref.current.style.height = ref.current.scrollHeight + 'px';
-      updateBlockProps(block.id, { text: ref.current.value });
-    }
-  };
+  const props = block.props as ParagraphProps;
   return (
     <textarea
-      ref={ref}
       value={props.text}
-      onChange={handleInput}
-      rows={1}
-      className="w-full bg-transparent border-0 outline-none resize-none text-base leading-relaxed text-surface-800 dark:text-surface-200 placeholder-surface-300 dark:placeholder-surface-600"
-      placeholder="Start writing..."
-      style={{ height: 'auto', minHeight: '1.5em' }}
+      onChange={(e) => updateBlockProps(block.id, { text: e.target.value })}
+      className="w-full bg-transparent border-0 outline-none resize-none text-[15px] leading-relaxed text-surface-800 dark:text-surface-200 placeholder-surface-400 min-h-[2em]"
+      placeholder="Type something..."
+      rows={Math.max(1, Math.ceil(props.text.length / 80))}
     />
   );
 }
 
 function ImageBlock({ block }: { block: Block }) {
-  const props = block.props as ImageProps;
   const { updateBlockProps } = useEditorStore();
+  const props = block.props as ImageProps;
+  const [url, setUrl] = useState(props.src || '');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      updateBlockProps(block.id, { src: dataUrl, alt: file.name });
+      setUrl(dataUrl);
+    };
+    reader.readAsDataURL(file);
+  };
+
   if (!props.src) {
     return (
-      <div className="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded-xl p-8 text-center bg-surface-50/50 dark:bg-surface-900/30">
-        <div className="w-10 h-10 rounded-xl bg-surface-200/60 dark:bg-surface-700/60 flex items-center justify-center mx-auto mb-3">
-          <svg className="w-5 h-5 text-surface-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
+      <div className="flex flex-col gap-3">
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          className="border-2 border-dashed border-surface-300 dark:border-surface-600 rounded-xl p-8 text-center cursor-pointer hover:border-brand-400 hover:bg-brand-50/50 dark:hover:bg-brand-900/20 transition-all"
+        >
+          <p className="text-sm text-surface-500 dark:text-surface-400 font-medium">Click to upload an image</p>
+          <p className="text-xs text-surface-400 mt-1">PNG, JPG, SVG, WebP</p>
         </div>
-        <input type="text" placeholder="Paste image URL..." value={props.src} onChange={(e) => updateBlockProps(block.id, { src: e.target.value })} className="w-full max-w-sm mx-auto bg-transparent border-b border-surface-300 dark:border-surface-600 text-center outline-none py-1 text-sm text-surface-700 dark:text-surface-300 placeholder-surface-400" />
-        <p className="text-[11px] text-surface-400 mt-2">Paste an image URL above</p>
+        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+        <div className="flex items-center gap-2">
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') updateBlockProps(block.id, { src: url }); }}
+            className="flex-1 bg-surface-50 dark:bg-surface-700/50 border border-surface-200 dark:border-surface-600 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-500"
+            placeholder="Or paste image URL..."
+          />
+          <button
+            onClick={() => updateBlockProps(block.id, { src: url })}
+            className="btn-secondary text-xs"
+          >
+            Set
+          </button>
+        </div>
       </div>
     );
   }
+
   return (
-    <figure>
-      <img src={props.src} alt={props.alt} className="max-w-full h-auto rounded-xl shadow-sm" />
-      <input type="text" value={props.caption || ''} onChange={(e) => updateBlockProps(block.id, { caption: e.target.value })} className="w-full text-center text-[13px] text-surface-400 bg-transparent border-0 outline-none mt-2 placeholder-surface-300" placeholder="Add caption..." />
+    <figure className="flex flex-col gap-2">
+      <img src={props.src} alt={props.alt || ''} className="max-w-full h-auto rounded-lg" />
+      <input
+        value={props.caption || ''}
+        onChange={(e) => updateBlockProps(block.id, { caption: e.target.value })}
+        className="bg-transparent border-0 outline-none text-xs text-surface-400 text-center italic placeholder-surface-300"
+        placeholder="Add caption..."
+      />
     </figure>
   );
 }
 
 function TableBlock({ block }: { block: Block }) {
-  const props = block.props as TableProps;
   const { updateBlockProps } = useEditorStore();
+  const props = block.props as TableProps;
+
   const updateCell = (row: number, col: number, value: string) => {
-    const newRows = props.rows.map((r, ri) => ri === row ? r.map((c, ci) => ci === col ? value : c) : [...r]);
+    const newRows = props.rows.map((r, ri) =>
+      ri === row ? r.map((c, ci) => ci === col ? value : c) : [...r]
+    );
     updateBlockProps(block.id, { rows: newRows });
   };
-  const addRow = () => { updateBlockProps(block.id, { rows: [...props.rows, Array(props.rows[0]?.length || 2).fill('')] }); };
-  const addCol = () => { updateBlockProps(block.id, { rows: props.rows.map(r => [...r, '']) }); };
+
+  const addRow = () => {
+    const newRow = Array(props.rows[0]?.length || 2).fill('');
+    updateBlockProps(block.id, { rows: [...props.rows, newRow] });
+  };
+
+  const addCol = () => {
+    const newRows = props.rows.map(r => [...r, '']);
+    updateBlockProps(block.id, { rows: newRows });
+  };
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse rounded-xl overflow-hidden">
-        <tbody>
-          {props.rows.map((row: string[], ri: number) => (
-            <tr key={ri}>{row.map((cell: string, ci: number) => {
-              const Tag = ri < props.headerRows ? 'th' : 'td';
-              return (
-                <Tag key={ci} className="border border-surface-200 dark:border-surface-700 p-0">
-                  <input
-                    type="text"
-                    value={cell}
-                    onChange={(e) => updateCell(ri, ci, e.target.value)}
-                    className="w-full bg-transparent border-0 outline-none px-3 py-2 text-sm text-surface-800 dark:text-surface-200 placeholder-surface-300"
-                    placeholder={ri < props.headerRows ? 'Header' : 'Cell'}
-                  />
-                </Tag>
-              );
-            })}</tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="flex gap-2 mt-2">
-        <button onClick={addRow} className="text-[11px] text-surface-400 hover:text-brand-600 dark:hover:text-brand-400 flex items-center gap-1 font-medium transition-colors"><Plus className="w-3 h-3" /> Row</button>
-        <button onClick={addCol} className="text-[11px] text-surface-400 hover:text-brand-600 dark:hover:text-brand-400 flex items-center gap-1 font-medium transition-colors"><Plus className="w-3 h-3" /> Column</button>
+    <div className="space-y-2">
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <tbody>
+            {props.rows.map((row, ri) => (
+              <tr key={ri}>
+                {row.map((cell, ci) => (
+                  <td key={ci} className="border border-surface-200 dark:border-surface-600 p-0">
+                    {ri < props.headerRows ? (
+                      <input
+                        value={cell}
+                        onChange={(e) => updateCell(ri, ci, e.target.value)}
+                        className="w-full bg-surface-50 dark:bg-surface-700/50 border-0 outline-none px-2 py-1.5 text-sm font-semibold text-surface-800 dark:text-surface-200"
+                        placeholder="Header..."
+                      />
+                    ) : (
+                      <input
+                        value={cell}
+                        onChange={(e) => updateCell(ri, ci, e.target.value)}
+                        className="w-full bg-transparent border-0 outline-none px-2 py-1.5 text-sm text-surface-700 dark:text-surface-300"
+                        placeholder="Cell..."
+                      />
+                    )}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex gap-2">
+        <button onClick={addRow} className="text-xs text-surface-400 hover:text-brand-500 flex items-center gap-1 transition-colors">
+          <Plus className="w-3 h-3" /> Row
+        </button>
+        <button onClick={addCol} className="text-xs text-surface-400 hover:text-brand-500 flex items-center gap-1 transition-colors">
+          <Plus className="w-3 h-3" /> Column
+        </button>
       </div>
     </div>
   );
 }
 
 function ListBlock({ block }: { block: Block }) {
-  const props = block.props as ListProps;
   const { updateBlockProps } = useEditorStore();
-  const updateItem = (index: number, text: string) => { updateBlockProps(block.id, { items: props.items.map((item, i) => i === index ? { ...item, text } : item) }); };
-  const addItem = () => { updateBlockProps(block.id, { items: [...props.items, { id: generateId(), text: '' }] }); };
-  const removeItem = (index: number) => { if (props.items.length > 1) updateBlockProps(block.id, { items: props.items.filter((_, i) => i !== index) }); };
+  const props = block.props as ListProps;
+
+  const updateItem = (id: string, text: string) => {
+    const newItems = props.items.map(item => item.id === id ? { ...item, text } : item);
+    updateBlockProps(block.id, { items: newItems });
+  };
+
+  const addItem = () => {
+    updateBlockProps(block.id, { items: [...props.items, { id: generateId(), text: '' }] });
+  };
+
+  const removeItem = (id: string) => {
+    if (props.items.length > 1) {
+      updateBlockProps(block.id, { items: props.items.filter(item => item.id !== id) });
+    }
+  };
+
   const Tag = props.type === 'ordered' ? 'ol' : 'ul';
+  const listStyle = props.type === 'ordered' ? 'list-decimal' : 'list-disc';
+
   return (
-    <div>
-      <div className="segment-group mb-3">
-        <button onClick={() => updateBlockProps(block.id, { type: 'unordered' })} className={`segment-item text-[11px] ${props.type === 'unordered' ? 'active' : ''}`}>Bullets</button>
-        <button onClick={() => updateBlockProps(block.id, { type: 'ordered' })} className={`segment-item text-[11px] ${props.type === 'ordered' ? 'active' : ''}`}>Numbered</button>
-      </div>
-      <Tag className={`${props.type === 'ordered' ? 'list-decimal' : 'list-disc'} pl-5 space-y-1`}>
+    <div className="space-y-1">
+      <Tag className={`${listStyle} pl-5 space-y-0.5`}>
         {props.items.map((item, i) => (
-          <li key={item.id} className="flex items-center gap-2 group/item">
-            <input type="text" value={item.text} onChange={(e) => updateItem(i, e.target.value)} className="flex-1 bg-transparent border-0 outline-none text-surface-800 dark:text-surface-200 placeholder-surface-300" placeholder="List item..." />
-            {props.items.length > 1 && <button onClick={() => removeItem(i)} className="opacity-0 group-hover/item:opacity-100 text-surface-300 hover:text-red-500 transition-all"><Minus className="w-3 h-3" /></button>}
+          <li key={item.id} className="flex items-center gap-1.5 group/item">
+            <input
+              value={item.text}
+              onChange={(e) => updateItem(item.id, e.target.value)}
+              className="flex-1 bg-transparent border-0 outline-none text-[15px] text-surface-800 dark:text-surface-200 placeholder-surface-400"
+              placeholder={`Item ${i + 1}...`}
+            />
+            {props.items.length > 1 && (
+              <button
+                onClick={() => removeItem(item.id)}
+                className="opacity-0 group-hover/item:opacity-100 p-0.5 rounded hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-400 hover:text-red-500 transition-all"
+              >
+                <Minus className="w-3 h-3" />
+              </button>
+            )}
           </li>
         ))}
       </Tag>
-      <button onClick={addItem} className="text-[11px] text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 mt-2 flex items-center gap-1 font-medium transition-colors"><Plus className="w-3 h-3" /> Add item</button>
+      <button onClick={addItem} className="text-xs text-surface-400 hover:text-brand-500 flex items-center gap-1 transition-colors">
+        <Plus className="w-3 h-3" /> Add item
+      </button>
+      <div className="flex gap-2 mt-1">
+        <button
+          onClick={() => updateBlockProps(block.id, { type: props.type === 'ordered' ? 'unordered' : 'ordered' })}
+          className="text-xs text-surface-400 hover:text-brand-500 flex items-center gap-1 transition-colors"
+        >
+          Switch to {props.type === 'ordered' ? 'unordered' : 'ordered'}
+        </button>
+      </div>
     </div>
   );
 }
 
 function CalloutBlock({ block }: { block: Block }) {
-  const props = block.props as CalloutProps;
   const { updateBlockProps } = useEditorStore();
+  const props = block.props as CalloutProps;
   const variants: Record<string, { bg: string; border: string; icon: string }> = {
-    info: { bg: 'bg-blue-50/80 dark:bg-blue-900/15', border: 'border-blue-200/60 dark:border-blue-800/40', icon: '\u2139' },
-    warning: { bg: 'bg-amber-50/80 dark:bg-amber-900/15', border: 'border-amber-200/60 dark:border-amber-800/40', icon: '\u26A0' },
-    error: { bg: 'bg-red-50/80 dark:bg-red-900/15', border: 'border-red-200/60 dark:border-red-800/40', icon: '\u2715' },
-    success: { bg: 'bg-emerald-50/80 dark:bg-emerald-900/15', border: 'border-emerald-200/60 dark:border-emerald-800/40', icon: '\u2713' },
+    info: { bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-300 dark:border-blue-700', icon: 'ℹ' },
+    warning: { bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-300 dark:border-amber-700', icon: '⚠' },
+    error: { bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-300 dark:border-red-700', icon: '✕' },
+    success: { bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-300 dark:border-green-700', icon: '✓' },
   };
   const v = variants[props.variant] || variants.info;
+
   return (
-    <div className={`${v.bg} border ${v.border} rounded-xl p-4`}>
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-lg">{v.icon}</span>
-        <select value={props.variant} onChange={(e) => updateBlockProps(block.id, { variant: e.target.value })} className="text-[11px] font-bold bg-transparent border-0 outline-none uppercase tracking-wider text-surface-500 cursor-pointer">
-          <option value="info">Info</option><option value="warning">Warning</option><option value="error">Error</option><option value="success">Success</option>
-        </select>
-      </div>
-      <textarea value={props.text} onChange={(e) => updateBlockProps(block.id, { text: e.target.value })} className="w-full bg-transparent border-0 outline-none resize-none text-[13px] text-surface-700 dark:text-surface-300 placeholder-surface-300" rows={2} placeholder="Callout text..." />
+    <div className={`${v.bg} border-l-4 ${v.border} rounded-r-lg p-3 flex items-start gap-2`}>
+      <span className="text-sm mt-0.5 select-none">{v.icon}</span>
+      <textarea
+        value={props.text}
+        onChange={(e) => updateBlockProps(block.id, { text: e.target.value })}
+        className="flex-1 bg-transparent border-0 outline-none resize-none text-sm text-surface-700 dark:text-surface-300 placeholder-surface-400 min-h-[2em]"
+        placeholder="Write a callout..."
+        rows={Math.max(1, Math.ceil(props.text.length / 60))}
+      />
+      <select
+        value={props.variant}
+        onChange={(e) => updateBlockProps(block.id, { variant: e.target.value })}
+        className="bg-transparent border-0 outline-none text-xs text-surface-400 cursor-pointer"
+      >
+        <option value="info">Info</option>
+        <option value="warning">Warning</option>
+        <option value="error">Error</option>
+        <option value="success">Success</option>
+      </select>
     </div>
   );
 }
 
 function CodeBlockContent({ block }: { block: Block }) {
-  const props = block.props as CodeProps;
   const { updateBlockProps } = useEditorStore();
+  const props = block.props as CodeProps;
+
   return (
-    <div className="rounded-xl overflow-hidden border border-surface-200/60 dark:border-surface-700/50">
-      <div className="flex items-center gap-2 px-4 py-2 bg-surface-800 text-surface-400">
-        <div className="flex gap-1.5 mr-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-red-400/60" />
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-400/60" />
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/60" />
-        </div>
-        <input type="text" value={props.language} onChange={(e) => updateBlockProps(block.id, { language: e.target.value })} className="bg-transparent border-0 outline-none text-[11px] font-bold uppercase tracking-widest placeholder-surface-600" placeholder="language" />
+    <div className="rounded-lg overflow-hidden">
+      <div className="flex items-center justify-between bg-surface-800 dark:bg-surface-900 px-3 py-1.5">
+        <input
+          value={props.language}
+          onChange={(e) => updateBlockProps(block.id, { language: e.target.value })}
+          className="bg-transparent border-0 outline-none text-xs text-surface-400 uppercase font-mono placeholder-surface-600 w-24"
+          placeholder="language..."
+        />
       </div>
-      <textarea value={props.code} onChange={(e) => updateBlockProps(block.id, { code: e.target.value })} className="w-full bg-surface-900 text-surface-100 p-4 font-mono text-sm border-0 outline-none resize-none leading-relaxed placeholder-surface-600" rows={Math.max(3, props.code.split('\n').length)} placeholder="// Your code here" spellCheck={false} />
+      <textarea
+        value={props.code}
+        onChange={(e) => updateBlockProps(block.id, { code: e.target.value })}
+        className="w-full bg-surface-900 dark:bg-surface-950 border-0 outline-none resize-none text-sm text-surface-100 font-mono p-4 leading-relaxed placeholder-surface-600 min-h-[6em]"
+        placeholder="Paste your code here..."
+        rows={Math.max(4, props.code.split('\n').length + 1)}
+        spellCheck={false}
+      />
     </div>
   );
 }
 
 function DividerBlock({ block }: { block: Block }) {
-  const props = block.props as DividerProps;
   const { updateBlockProps } = useEditorStore();
+  const props = block.props as DividerProps;
+  const styles: Record<string, string> = {
+    line: 'border-t border-surface-300 dark:border-surface-600',
+    dots: 'border-t-2 border-dotted border-surface-300 dark:border-surface-600',
+    double: 'border-t-[3px] border-double border-surface-300 dark:border-surface-600',
+  };
+
   return (
-    <div>
-      <div className="segment-group mb-3">
-        {(['line', 'dots', 'double'] as const).map(s => (
-          <button key={s} onClick={() => updateBlockProps(block.id, { style: s })} className={`segment-item text-[11px] capitalize ${props.style === s ? 'active' : ''}`}>{s}</button>
-        ))}
-      </div>
-      {props.style === 'line' && <hr className="border-surface-200 dark:border-surface-700" />}
-      {props.style === 'dots' && <hr className="border-t-2 border-dotted border-surface-300 dark:border-surface-600" />}
-      {props.style === 'double' && <div><hr className="border-surface-200 dark:border-surface-700 mb-0.5" /><hr className="border-surface-200 dark:border-surface-700" /></div>}
+    <div className="flex items-center gap-3 py-2">
+      <div className={`flex-1 ${styles[props.style] || styles.line}`} />
+      <select
+        value={props.style}
+        onChange={(e) => updateBlockProps(block.id, { style: e.target.value })}
+        className="bg-transparent border-0 outline-none text-xs text-surface-400 cursor-pointer"
+      >
+        <option value="line">Line</option>
+        <option value="dots">Dots</option>
+        <option value="double">Double</option>
+      </select>
     </div>
   );
 }
 
 function ColumnsBlock({ block }: { block: Block }) {
+  const { updateBlockProps, blocks } = useEditorStore();
   const props = block.props as ColumnsProps;
-  const { updateBlockProps } = useEditorStore();
-  const children = block.children || [];
+  const colBlocks = block.children || [];
+
+  const updateChildBlock = (colIndex: number, updates: Partial<Block>) => {
+    const newChildren = [...colBlocks];
+    if (newChildren[colIndex]) {
+      newChildren[colIndex] = { ...newChildren[colIndex], ...updates };
+      // Use the parent block's update mechanism
+      useEditorStore.getState().setBlocks(
+        blocks.map(b => b.id === block.id ? { ...b, children: newChildren } : b)
+      );
+    }
+  };
+
+  const gridCols = props.count === 2 ? 'grid-cols-2' : 'grid-cols-3';
+
   return (
-    <div>
-      <div className="segment-group mb-3">
-        {[2, 3].map(n => (
-          <button key={n} onClick={() => updateBlockProps(block.id, { count: n })} className={`segment-item text-[11px] ${props.count === n ? 'active' : ''}`}>{n} Columns</button>
-        ))}
+    <div className="space-y-2">
+      <div className={`grid ${gridCols} gap-4`}>
+        {Array.from({ length: props.count }).map((_, i) => {
+          const child = colBlocks[i];
+          return (
+            <div key={i} className="bg-surface-50/50 dark:bg-surface-800/30 rounded-lg p-3 min-h-[3em] border border-dashed border-surface-200 dark:border-surface-700">
+              {child ? (
+                <textarea
+                  value={(child.props as ParagraphProps).text || ''}
+                  onChange={(e) => updateChildBlock(i, { props: { ...child.props, text: e.target.value } })}
+                  className="w-full bg-transparent border-0 outline-none resize-none text-sm text-surface-700 dark:text-surface-300 placeholder-surface-400"
+                  placeholder={`Column ${i + 1}...`}
+                  rows={2}
+                />
+              ) : (
+                <p className="text-xs text-surface-400 text-center py-4">Column {i + 1}</p>
+              )}
+            </div>
+          );
+        })}
       </div>
-      <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${props.count}, 1fr)` }}>
-        {Array.from({ length: props.count }).map((_, i) => (
-          <div key={i} className="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded-xl p-3 min-h-[60px] bg-surface-50/50 dark:bg-surface-900/20">
-            {children[i] ? <BlockContent block={children[i]} /> : <p className="text-[11px] text-surface-400 italic text-center py-2">Column {i + 1}</p>}
-          </div>
+      <div className="flex gap-2">
+        {[2, 3].map(c => (
+          <button
+            key={c}
+            onClick={() => updateBlockProps(block.id, { count: c })}
+            className={`text-xs px-2 py-1 rounded-lg transition-colors ${props.count === c ? 'bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400' : 'text-surface-400 hover:text-surface-600'}`}
+          >
+            {c} columns
+          </button>
         ))}
       </div>
     </div>
@@ -319,37 +545,184 @@ function ColumnsBlock({ block }: { block: Block }) {
 
 function PageBreakBlock() {
   return (
-    <div className="flex items-center gap-3 py-1">
-      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-surface-300 dark:via-surface-600 to-transparent" />
-      <span className="text-[10px] font-bold text-surface-400 uppercase tracking-widest">Page Break</span>
-      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-surface-300 dark:via-surface-600 to-transparent" />
+    <div className="flex items-center justify-center py-4 text-surface-400">
+      <div className="flex-1 border-t border-dashed border-surface-300 dark:border-surface-600" />
+      <span className="px-3 text-xs font-semibold uppercase tracking-wider">Page Break</span>
+      <div className="flex-1 border-t border-dashed border-surface-300 dark:border-surface-600" />
     </div>
   );
 }
 
 function CoverBlock({ block }: { block: Block }) {
-  const props = block.props as CoverProps;
   const { updateBlockProps } = useEditorStore();
+  const props = block.props as CoverProps;
+
   return (
-    <div className="text-center py-12 px-6 bg-gradient-to-b from-surface-50/50 to-transparent dark:from-surface-800/30 dark:to-transparent rounded-xl">
-      <input type="text" value={props.title} onChange={(e) => updateBlockProps(block.id, { title: e.target.value })} className="w-full text-4xl font-extrabold text-center bg-transparent border-0 outline-none text-surface-900 dark:text-surface-100 tracking-tight placeholder-surface-300" placeholder="Document Title" />
-      <input type="text" value={props.subtitle || ''} onChange={(e) => updateBlockProps(block.id, { subtitle: e.target.value })} className="w-full text-lg text-surface-500 dark:text-surface-400 text-center bg-transparent border-0 outline-none mt-3 placeholder-surface-300" placeholder="Subtitle" />
-      <div className="flex justify-center gap-4 mt-5">
-        <input type="text" value={props.author || ''} onChange={(e) => updateBlockProps(block.id, { author: e.target.value })} className="text-[13px] text-surface-400 bg-transparent border-0 outline-none text-center placeholder-surface-300" placeholder="Author" />
-        <span className="text-surface-300">&middot;</span>
-        <input type="text" value={props.date || ''} onChange={(e) => updateBlockProps(block.id, { date: e.target.value })} className="text-[13px] text-surface-400 bg-transparent border-0 outline-none text-center placeholder-surface-300" placeholder="Date" />
+    <div className="bg-gradient-to-br from-surface-50 to-surface-100 dark:from-surface-800 dark:to-surface-900 rounded-xl p-8 text-center space-y-3">
+      <input
+        value={props.title}
+        onChange={(e) => updateBlockProps(block.id, { title: e.target.value })}
+        className="w-full bg-transparent border-0 outline-none text-3xl font-bold text-surface-900 dark:text-surface-100 text-center placeholder-surface-400"
+        placeholder="Document Title..."
+      />
+      <input
+        value={props.subtitle || ''}
+        onChange={(e) => updateBlockProps(block.id, { subtitle: e.target.value })}
+        className="w-full bg-transparent border-0 outline-none text-lg text-surface-500 dark:text-surface-400 text-center placeholder-surface-300"
+        placeholder="Subtitle..."
+      />
+      <div className="flex items-center justify-center gap-6 pt-4">
+        <input
+          value={props.author || ''}
+          onChange={(e) => updateBlockProps(block.id, { author: e.target.value })}
+          className="bg-transparent border-0 outline-none text-sm text-surface-400 text-center placeholder-surface-300"
+          placeholder="Author..."
+        />
+        <input
+          value={props.date || ''}
+          onChange={(e) => updateBlockProps(block.id, { date: e.target.value })}
+          className="bg-transparent border-0 outline-none text-sm text-surface-400 text-center placeholder-surface-300"
+          placeholder="Date..."
+        />
       </div>
     </div>
   );
 }
 
 function HtmlBlock({ block }: { block: Block }) {
-  const props = block.props as HtmlProps;
   const { updateBlockProps } = useEditorStore();
+  const props = block.props as HtmlProps;
+
   return (
-    <div>
-      <div className="text-[10px] font-bold text-surface-400 uppercase tracking-widest mb-2">Custom HTML</div>
-      <textarea value={props.html} onChange={(e) => updateBlockProps(block.id, { html: e.target.value })} className="w-full bg-surface-900 text-surface-100 p-3.5 font-mono text-sm border-0 outline-none resize-none rounded-xl leading-relaxed placeholder-surface-600" rows={3} placeholder="<div>Your HTML here</div>" spellCheck={false} />
+    <div className="rounded-lg overflow-hidden border border-surface-200 dark:border-surface-700">
+      <div className="bg-surface-100 dark:bg-surface-800 px-3 py-1.5 text-xs font-semibold text-surface-500 dark:text-surface-400 flex items-center gap-2">
+        <span className="font-mono">&lt;/&gt;</span> Custom HTML
+      </div>
+      <textarea
+        value={props.html}
+        onChange={(e) => updateBlockProps(block.id, { html: e.target.value })}
+        className="w-full bg-surface-50 dark:bg-surface-900 border-0 outline-none resize-none text-sm text-surface-700 dark:text-surface-300 font-mono p-3 leading-relaxed placeholder-surface-400 min-h-[4em]"
+        placeholder="<div>Your HTML here...</div>"
+        rows={Math.max(3, props.html.split('\n').length + 1)}
+        spellCheck={false}
+      />
+    </div>
+  );
+}
+
+function SpacerBlock({ block }: { block: Block }) {
+  const { updateBlockProps } = useEditorStore();
+  const props = block.props as SpacerProps;
+  const heightNum = parseInt(props.height) || 32;
+
+  return (
+    <div className="flex items-center gap-3 py-1">
+      <div className="flex items-center justify-center w-full" style={{ height: `${Math.min(heightNum, 120)}px` }}>
+        <div className="flex-1 border-t border-dashed border-surface-200 dark:border-surface-700" />
+        <div className="flex items-center gap-2 px-2">
+          <input
+            type="range"
+            min="8"
+            max="200"
+            value={heightNum}
+            onChange={(e) => updateBlockProps(block.id, { height: e.target.value })}
+            className="w-24 h-1 accent-brand-500"
+          />
+          <span className="text-xs text-surface-400 font-mono w-10">{heightNum}px</span>
+        </div>
+        <div className="flex-1 border-t border-dashed border-surface-200 dark:border-surface-700" />
+      </div>
+    </div>
+  );
+}
+
+function WrapperBlock({ block }: { block: Block }) {
+  const { updateBlockProps, blocks } = useEditorStore();
+  const props = block.props as WrapperProps;
+  const childBlocks = block.children || [];
+
+  const updateChildBlock = (childIndex: number, updates: Partial<Block>) => {
+    const newChildren = [...childBlocks];
+    if (newChildren[childIndex]) {
+      newChildren[childIndex] = { ...newChildren[childIndex], ...updates };
+      useEditorStore.getState().setBlocks(
+        blocks.map(b => b.id === block.id ? { ...b, children: newChildren } : b)
+      );
+    }
+  };
+
+  const tags = [
+    { value: 'div', label: 'Div' },
+    { value: 'section', label: 'Section' },
+    { value: 'article', label: 'Article' },
+    { value: 'aside', label: 'Aside' },
+  ];
+
+  return (
+    <div className="border border-dashed border-surface-300 dark:border-surface-600 rounded-lg p-4 space-y-3">
+      <div className="flex items-center gap-2 text-xs text-surface-400 font-mono">
+        <span>&lt;{props.tag}&gt;</span>
+        <div className="flex gap-1 ml-auto">
+          {tags.map(t => (
+            <button
+              key={t.value}
+              onClick={() => updateBlockProps(block.id, { tag: t.value })}
+              className={`px-1.5 py-0.5 rounded transition-colors ${props.tag === t.value ? 'bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400' : 'hover:bg-surface-100 dark:hover:bg-surface-700'}`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {childBlocks.length > 0 ? (
+        <div className="space-y-2 pl-2">
+          {childBlocks.map((child, i) => (
+            <div key={child.id} className="bg-surface-50 dark:bg-surface-800/50 rounded-lg p-2">
+              <textarea
+                value={(child.props as ParagraphProps).text || ''}
+                onChange={(e) => updateChildBlock(i, { props: { ...child.props, text: e.target.value } })}
+                className="w-full bg-transparent border-0 outline-none resize-none text-sm text-surface-700 dark:text-surface-300 placeholder-surface-400"
+                placeholder="Wrapper content..."
+                rows={1}
+              />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-surface-400 text-center py-2">Wrapper content area</p>
+      )}
+    </div>
+  );
+}
+
+function PageDividerBlock({ block }: { block: Block }) {
+  const { updateBlockProps } = useEditorStore();
+  const props = block.props as PageDividerProps;
+
+  const variants: Record<string, { className: string; style: React.CSSProperties }> = {
+    solid: { className: 'border-t', style: { borderTopWidth: props.thickness || '2px', borderTopColor: props.color || '#94a3b8', margin: `${props.spacing || '16px'} 0` } },
+    dashed: { className: 'border-t border-dashed', style: { borderTopWidth: props.thickness || '2px', borderTopColor: props.color || '#94a3b8', margin: `${props.spacing || '16px'} 0` } },
+    dotted: { className: 'border-t border-dotted', style: { borderTopWidth: props.thickness || '2px', borderTopColor: props.color || '#94a3b8', margin: `${props.spacing || '16px'} 0` } },
+    double: { className: '', style: { borderTop: `${props.thickness || '3px'} double ${props.color || '#94a3b8'}`, margin: `${props.spacing || '16px'} 0` } },
+    gradient: { className: '', style: { background: `linear-gradient(to right, transparent, ${props.color || '#94a3b8'}, transparent)`, height: props.thickness || '2px', margin: `${props.spacing || '16px'} 0` } },
+  };
+
+  const v = variants[props.variant] || variants.solid;
+
+  return (
+    <div className="flex items-center gap-3 py-1">
+      <div className={`flex-1 ${v.className}`} style={v.style} />
+      <div className="flex gap-1">
+        {['solid', 'dashed', 'dotted', 'double', 'gradient'].map(variant => (
+          <button
+            key={variant}
+            onClick={() => updateBlockProps(block.id, { variant })}
+            className={`px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors ${props.variant === variant ? 'bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400' : 'text-surface-400 hover:text-surface-600'}`}
+          >
+            {variant}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

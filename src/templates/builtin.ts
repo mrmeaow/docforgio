@@ -13,6 +13,14 @@ function slot(type: string, props: Record<string, unknown>, hint: string): any {
   return { id: generateId(), type, isSlot: true, slotHint: hint, props, style: {}, children: null };
 }
 
+function spacer(height: string = '32'): any {
+  return { id: generateId(), type: 'spacer', isSlot: false, slotHint: null, props: { height }, style: {}, children: null };
+}
+
+function pageDivider(variant: 'solid' | 'dashed' | 'dotted' | 'double' | 'gradient' = 'solid', thickness = '2px', spacing = '16px'): any {
+  return { id: generateId(), type: 'pageDivider', isSlot: false, slotHint: null, props: { variant, thickness, spacing }, style: {}, children: null };
+}
+
 const now = Date.now();
 
 export const builtinTemplates: Template[] = [
@@ -29,6 +37,7 @@ export const builtinTemplates: Template[] = [
     createdAt: now,
     ...t([
       blk('cover', { title: 'Untitled Document', subtitle: '', author: '', date: '' }),
+      spacer('24'),
       blk('paragraph', { text: 'Start writing here...' }),
     ]),
   },
@@ -45,19 +54,26 @@ export const builtinTemplates: Template[] = [
     createdAt: now,
     ...t([
       blk('cover', { title: 'Product Requirements Document', subtitle: 'Project Name', author: 'Product Team', date: new Date().toLocaleDateString() }),
+      pageDivider('gradient', '3px', '32px'),
       blk('heading', { level: 1, text: 'Executive Summary' }),
       slot('paragraph', { text: 'Provide a high-level overview of the product, its purpose, and key objectives.' }, 'Executive summary'),
+      spacer('32'),
       blk('heading', { level: 1, text: 'Problem Statement' }),
       slot('paragraph', { text: 'Describe the problem this product solves and why it matters.' }, 'Problem description'),
+      pageDivider('dashed', '2px', '24px'),
       blk('heading', { level: 2, text: 'Target Users' }),
       blk('table', { rows: [['Persona', 'Role', 'Pain Point', 'Solution'], ['', '', '', '']], headerRows: 1 }),
+      spacer('32'),
       blk('heading', { level: 1, text: 'Feature Requirements' }),
       blk('heading', { level: 2, text: 'P0 — Must Have' }),
       blk('list', { type: 'unordered', items: [{ id: generateId(), text: 'Feature 1' }, { id: generateId(), text: 'Feature 2' }] }),
+      spacer('24'),
       blk('heading', { level: 2, text: 'P1 — Should Have' }),
       blk('list', { type: 'unordered', items: [{ id: generateId(), text: 'Feature 3' }] }),
+      pageDivider('gradient', '3px', '32px'),
       blk('heading', { level: 1, text: 'KPIs & Success Metrics' }),
       blk('table', { rows: [['Metric', 'Target', 'Measurement'], ['', '', '']], headerRows: 1 }),
+      spacer('32'),
       blk('heading', { level: 1, text: 'Roadmap' }),
       blk('table', { rows: [['Phase', 'Timeline', 'Deliverables'], ['Sprint 1', '', ''], ['Sprint 2', '', '']], headerRows: 1 }),
     ]),
@@ -101,14 +117,19 @@ export const builtinTemplates: Template[] = [
     createdAt: now,
     ...t([
       blk('cover', { title: 'Business Proposal', subtitle: 'Prepared for [Client]', author: '[Your Company]', date: new Date().toLocaleDateString() }),
+      pageDivider('gradient', '3px', '48px'),
       blk('heading', { level: 1, text: 'The Challenge' }),
       slot('paragraph', { text: 'Describe the client\'s current challenge or pain point.' }, 'Client challenge'),
+      spacer('32'),
       blk('heading', { level: 1, text: 'Our Solution' }),
       slot('paragraph', { text: 'Present your proposed solution and approach.' }, 'Solution overview'),
+      spacer('24'),
       blk('heading', { level: 2, text: 'Key Benefits' }),
       blk('list', { type: 'unordered', items: [{ id: generateId(), text: 'Benefit 1' }, { id: generateId(), text: 'Benefit 2' }, { id: generateId(), text: 'Benefit 3' }] }),
+      pageDivider('dashed', '2px', '32px'),
       blk('heading', { level: 1, text: 'Pricing' }),
       blk('table', { rows: [['Package', 'Features', 'Price'], ['Basic', '', '$X'], ['Pro', '', '$Y']], headerRows: 1 }),
+      spacer('32'),
       blk('heading', { level: 1, text: 'Timeline' }),
       blk('table', { rows: [['Phase', 'Duration', 'Milestones'], ['', '', '']], headerRows: 1 }),
     ], `body { font-family: 'Inter', system-ui, sans-serif; font-size: 11pt; line-height: 1.6; color: #334155; }
@@ -297,11 +318,13 @@ ul li::before { content: "→"; position: absolute; left: 0; color: #14b8a6; fon
       blk('cover', { title: 'Story Title', subtitle: 'A Short Story', author: 'Author Name', date: '' }),
       blk('pagebreak', {}),
       blk('heading', { level: 1, text: 'Chapter 1' }),
+      spacer('24'),
       slot('paragraph', { text: 'Begin your story here. Set the scene, introduce characters, and draw the reader in.' }, 'Story text'),
-      blk('divider', { style: 'dots' }),
-      slot('paragraph', { text: 'Continue the narrative...' }, 'Story continuation'),
+      pageDivider('dotted', '2px', '48px'),
+      spacer('24'),
       blk('heading', { level: 1, text: 'Chapter 2' }),
-      slot('paragraph', { text: 'The story continues...' }, 'Chapter 2 text'),
+      spacer('24'),
+      slot('paragraph', { text: 'Continue the narrative...' }, 'Story continuation'),
     ], "body { font-family: 'Georgia', serif; font-size: 12pt; line-height: 1.8; } p { text-indent: 1.5em; } p:first-of-type { text-indent: 0; }"),
   },
   {
@@ -318,15 +341,19 @@ ul li::before { content: "→"; position: absolute; left: 0; color: #14b8a6; fon
     ...t([
       blk('heading', { level: 1, text: 'Your Name' }),
       blk('paragraph', { text: 'your@email.com | (555) 123-4567 | linkedin.com/in/yourname | city, state' }),
-      blk('divider', { style: 'line' }),
+      pageDivider('solid', '2px', '12px'),
+      spacer('16'),
       blk('heading', { level: 2, text: 'Summary' }),
       slot('paragraph', { text: 'Brief professional summary highlighting key skills and experience.' }, 'Professional summary'),
+      spacer('24'),
       blk('heading', { level: 2, text: 'Experience' }),
       blk('heading', { level: 3, text: 'Job Title — Company Name' }),
       blk('paragraph', { text: 'Month Year – Present' }),
       blk('list', { type: 'unordered', items: [{ id: generateId(), text: 'Key achievement with measurable impact' }, { id: generateId(), text: 'Responsibility and outcome' }] }),
+      spacer('24'),
       blk('heading', { level: 2, text: 'Education' }),
       blk('paragraph', { text: 'Degree — University Name, Year' }),
+      spacer('24'),
       blk('heading', { level: 2, text: 'Skills' }),
       slot('paragraph', { text: 'Skill 1, Skill 2, Skill 3, Skill 4, Skill 5' }, 'Skills list'),
     ], `body { font-family: 'Inter', system-ui, sans-serif; font-size: 11pt; line-height: 1.5; color: #1e293b; }

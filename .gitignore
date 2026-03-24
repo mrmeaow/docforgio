@@ -38,3 +38,8 @@ coverage
 # Playwright
 playwright-report
 test-results
+
+# Don't push AI agents dirs
+.qwen
+.kilocode
+.claude

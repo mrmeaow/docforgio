@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { produce } from 'immer';
-import type { Block, BlockType, EditorMode, BlockStyle, HeadingProps, ParagraphProps, ImageProps, TableProps, ListProps, CalloutProps, CodeProps, DividerProps, ColumnsProps, CoverProps, HtmlProps } from '../types';
+import type { Block, BlockType, EditorMode, BlockStyle, HeadingProps, ParagraphProps, ImageProps, TableProps, ListProps, CalloutProps, CodeProps, DividerProps, ColumnsProps, CoverProps, HtmlProps, SpacerProps, WrapperProps, PageDividerProps } from '../types';
 import { generateId } from '../utils/id';
 
 function shortId(id: string): string {
@@ -94,6 +94,12 @@ export function createBlock(type: BlockType): Block {
       return { ...baseBlock, props: { title: 'Document Title', subtitle: '', author: '', date: '' } };
     case 'html':
       return { ...baseBlock, props: { html: '<div>Custom HTML</div>' } };
+    case 'spacer':
+      return { ...baseBlock, props: { height: '32' } };
+    case 'wrapper':
+      return { ...baseBlock, props: { tag: 'div' }, children: [] };
+    case 'pageDivider':
+      return { ...baseBlock, props: { variant: 'solid', thickness: '2px', spacing: '16px' } };
   }
 }
 
@@ -224,8 +230,8 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     const state = get();
     if (mode === 'code' && state.mode === 'nocode') {
       const html = state.serializeToHtml();
-      const css = state.serializeToCss();
-      set({ mode, htmlSource: html, cssSource: css, codeSynced: true, dirty: true });
+      // Preserve existing cssSource (template styles) — only regenerate HTML
+      set({ mode, htmlSource: html, codeSynced: true, dirty: true });
     } else if (mode === 'nocode' && state.mode === 'code') {
       state.deserializeFromHtml(state.htmlSource);
       set({ mode, dirty: true });
@@ -236,51 +242,138 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
 
   serializeToHtml: () => {
     const { blocks } = get();
-    return blocks.map(blockToHtml).join('\n');
+    return blocks.map((block) => blockToHtml(block, 0)).join('\n\n');
   },
 
   serializeToCss: () => {
     const { blocks } = get();
     const lines: string[] = [];
 
-    lines.push('/* Base styles */');
-    lines.push('h1, h2, h3, h4 { margin: 0; font-weight: 700; line-height: 1.25; }');
+    lines.push('/* ===========================================');
+    lines.push('   Base Element Styles');
+    lines.push('   =========================================== */');
+    lines.push('');
+    lines.push('h1, h2, h3, h4 {');
+    lines.push('  margin: 0;');
+    lines.push('  font-weight: 700;');
+    lines.push('  line-height: 1.25;');
+    lines.push('}');
+    lines.push('');
     lines.push('h1 { font-size: 2.5rem; }');
     lines.push('h2 { font-size: 2rem; }');
     lines.push('h3 { font-size: 1.5rem; }');
     lines.push('h4 { font-size: 1.25rem; }');
-    lines.push('p { margin: 0; line-height: 1.6; }');
+    lines.push('');
+    lines.push('p {');
+    lines.push('  margin: 0;');
+    lines.push('  line-height: 1.6;');
+    lines.push('}');
+    lines.push('');
     lines.push('figure { margin: 0; }');
-    lines.push('img { max-width: 100%; height: auto; display: block; }');
-    lines.push('figcaption { font-size: 0.875rem; color: #666; margin-top: 0.5rem; }');
+    lines.push('img {');
+    lines.push('  max-width: 100%;');
+    lines.push('  height: auto;');
+    lines.push('  display: block;');
+    lines.push('}');
+    lines.push('figcaption {');
+    lines.push('  font-size: 0.875rem;');
+    lines.push('  color: #666;');
+    lines.push('  margin-top: 0.5rem;');
+    lines.push('}');
+    lines.push('');
     lines.push('table { border-collapse: collapse; width: 100%; }');
-    lines.push('th, td { padding: 0.5rem 0.75rem; border: 1px solid #ddd; text-align: left; }');
+    lines.push('th, td {');
+    lines.push('  padding: 0.5rem 0.75rem;');
+    lines.push('  border: 1px solid #ddd;');
+    lines.push('  text-align: left;');
+    lines.push('}');
     lines.push('th { background: #f5f5f5; font-weight: 600; }');
+    lines.push('');
     lines.push('ul, ol { margin: 0; padding-left: 1.5rem; }');
     lines.push('li { margin: 0.25rem 0; }');
-    lines.push('pre { margin: 0; padding: 1rem; background: #1e1e1e; color: #d4d4d4; border-radius: 0.375rem; overflow-x: auto; }');
+    lines.push('');
+    lines.push('pre {');
+    lines.push('  margin: 0;');
+    lines.push('  padding: 1rem;');
+    lines.push('  background: #1e1e1e;');
+    lines.push('  color: #d4d4d4;');
+    lines.push('  border-radius: 0.375rem;');
+    lines.push('  overflow-x: auto;');
+    lines.push('}');
     lines.push('code { font-family: monospace; }');
-    lines.push('hr { border: none; border-top: 1px solid #ddd; margin: 1rem 0; }');
+    lines.push('');
+    lines.push('hr {');
+    lines.push('  border: none;');
+    lines.push('  border-top: 1px solid #ddd;');
+    lines.push('  margin: 1rem 0;');
+    lines.push('}');
     lines.push('hr.divider-dots { border-top-style: dotted; }');
     lines.push('hr.divider-double { border-top: 3px double #ddd; }');
+    lines.push('');
+
+    lines.push('/* ===========================================');
+    lines.push('   Callout Variants');
+    lines.push('   =========================================== */');
+    lines.push('');
     lines.push('.callout { padding: 1rem; border-radius: 0.375rem; }');
     lines.push('.callout-info { background: #eff6ff; border-left: 4px solid #3b82f6; }');
     lines.push('.callout-warning { background: #fffbeb; border-left: 4px solid #f59e0b; }');
     lines.push('.callout-error { background: #fef2f2; border-left: 4px solid #ef4444; }');
     lines.push('.callout-success { background: #f0fdf4; border-left: 4px solid #22c55e; }');
-    lines.push('.cover { padding: 3rem 2rem; text-align: center; min-height: 50vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }');
+    lines.push('');
+
+    lines.push('/* ===========================================');
+    lines.push('   Layout: Cover, Columns, Page Break');
+    lines.push('   =========================================== */');
+    lines.push('');
+    lines.push('.cover {');
+    lines.push('  padding: 3rem 2rem;');
+    lines.push('  text-align: center;');
+    lines.push('  min-height: 50vh;');
+    lines.push('  display: flex;');
+    lines.push('  flex-direction: column;');
+    lines.push('  justify-content: center;');
+    lines.push('  align-items: center;');
+    lines.push('}');
+    lines.push('');
     lines.push('.columns { display: flex; gap: 1rem; }');
     lines.push('.column { flex: 1; }');
     lines.push('.page-break { page-break-after: always; }');
     lines.push('');
 
-    lines.push('/* Block-specific styles */');
+    lines.push('/* ===========================================');
+    lines.push('   Spacer & Wrapper & Page Divider');
+    lines.push('   =========================================== */');
+    lines.push('');
+    lines.push('.spacer { display: block; }');
+    lines.push('.wrapper { display: block; }');
+    lines.push('.page-divider { border: none; }');
+    lines.push('.page-divider-gradient {');
+    lines.push('  background: linear-gradient(to right, transparent, #94a3b8, transparent);');
+    lines.push('  height: 2px;');
+    lines.push('}');
+    lines.push('');
+
+    lines.push('/* ===========================================');
+    lines.push('   Block-Specific Styles');
+    lines.push('   =========================================== */');
+    lines.push('');
     for (const block of blocks) {
       const id = shortId(block.id);
       const className = `.block-${block.type}-${id}`;
       const css = blockStyleToCss(block.style);
       if (css) {
-        lines.push(`${className} { ${css}; }`);
+        const props = css.split('; ');
+        if (props.length <= 2) {
+          lines.push(`${className} { ${css}; }`);
+        } else {
+          lines.push(`${className} {`);
+          props.forEach(prop => {
+            lines.push(`  ${prop};`);
+          });
+          lines.push('}');
+        }
+        lines.push('');
       }
     }
 
@@ -377,6 +470,27 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
         }
         (block.props as ColumnsProps).count = colBlocks.length || 2;
         block.children = colBlocks.length ? colBlocks : [createBlock('paragraph'), createBlock('paragraph')];
+      } else if (tag === 'br' || (tag === 'div' && el.classList.contains('spacer'))) {
+        block = createBlock('spacer');
+        const height = el.getAttribute('data-height') || '32';
+        (block.props as SpacerProps).height = height;
+      } else if ((tag === 'div' || tag === 'section' || tag === 'article' || tag === 'aside') && el.classList.contains('wrapper')) {
+        block = createBlock('wrapper');
+        (block.props as WrapperProps).tag = tag as 'div' | 'section' | 'article' | 'aside';
+        const children: Block[] = [];
+        for (const child of Array.from(el.children)) {
+          const childBlock = parseElementToBlock(child);
+          if (childBlock) children.push(childBlock);
+        }
+        block.children = children;
+      } else if (tag === 'hr' && el.classList.contains('page-divider')) {
+        block = createBlock('pageDivider');
+        const variant = el.getAttribute('data-variant') || 'solid';
+        const thickness = el.getAttribute('data-thickness') || '2px';
+        const spacing = el.getAttribute('data-spacing') || '16px';
+        (block.props as PageDividerProps).variant = variant as 'solid' | 'dashed' | 'dotted' | 'double' | 'gradient';
+        (block.props as PageDividerProps).thickness = thickness;
+        (block.props as PageDividerProps).spacing = spacing;
       } else {
         block = createBlock('html');
         (block.props as HtmlProps).html = el.outerHTML;
@@ -482,7 +596,8 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   closeSlashMenu: () => set({ slashMenuOpen: false, slashMenuBlockId: null }),
 }));
 
-function blockToHtml(block: Block): string {
+function blockToHtml(block: Block, indent: number = 0): string {
+  const pad = '  '.repeat(indent);
   const styleStr = blockStyleToCss(block.style);
   const id = shortId(block.id);
   const className = `block-${block.type}-${id}`;
@@ -491,63 +606,107 @@ function blockToHtml(block: Block): string {
   switch (block.type) {
     case 'heading': {
       const p = block.props as import('../types').HeadingProps;
-      return `<h${p.level}${attrs}>${p.text}</h${p.level}>`;
+      return `${pad}<h${p.level}${attrs}>${p.text}</h${p.level}>`;
     }
     case 'paragraph': {
       const p = block.props as import('../types').ParagraphProps;
-      return `<p${attrs}>${p.html || p.text}</p>`;
+      return `${pad}<p${attrs}>${p.html || p.text}</p>`;
     }
     case 'image': {
       const p = block.props as import('../types').ImageProps;
-      const caption = p.caption ? `<figcaption>${p.caption}</figcaption>` : '';
-      return `<figure${attrs}><img src="${p.src}" alt="${p.alt}" />${caption}</figure>`;
+      if (p.caption) {
+        return `${pad}<figure${attrs}>\n${pad}  <img src="${p.src}" alt="${p.alt}" />\n${pad}  <figcaption>${p.caption}</figcaption>\n${pad}</figure>`;
+      }
+      return `${pad}<figure${attrs}>\n${pad}  <img src="${p.src}" alt="${p.alt}" />\n${pad}</figure>`;
     }
     case 'table': {
       const p = block.props as import('../types').TableProps;
-      let html = `<table${attrs}>`;
+      const innerPad = pad + '  ';
+      let html = `${pad}<table${attrs}>\n`;
       p.rows.forEach((row, ri) => {
         const tag = ri < p.headerRows ? 'th' : 'td';
-        html += '<tr>' + row.map(cell => `<${tag}>${cell}</${tag}>`).join('') + '</tr>';
+        const cells = row.map(cell => `<${tag}>${cell}</${tag}>`).join('');
+        html += `${innerPad}<tr>${cells}</tr>\n`;
       });
-      html += '</table>';
+      html += `${pad}</table>`;
       return html;
     }
     case 'list': {
       const p = block.props as import('../types').ListProps;
       const tag = p.type === 'ordered' ? 'ol' : 'ul';
-      return `<${tag}${attrs}>${p.items.map(i => `<li>${i.text}</li>`).join('')}</${tag}>`;
+      const innerPad = pad + '  ';
+      const items = p.items.map(i => `${innerPad}<li>${i.text}</li>`).join('\n');
+      return `${pad}<${tag}${attrs}>\n${items}\n${pad}</${tag}>`;
     }
     case 'callout': {
       const p = block.props as import('../types').CalloutProps;
-      return `<div class="callout callout-${p.variant} ${className}"${styleStr ? ` style="${styleStr}"` : ''}><p>${p.text}</p></div>`;
+      const styleAttr = styleStr ? ` style="${styleStr}"` : '';
+      return `${pad}<div class="callout callout-${p.variant} ${className}"${styleAttr}><p>${p.text}</p></div>`;
     }
     case 'code': {
       const p = block.props as import('../types').CodeProps;
-      return `<pre${attrs}><code class="language-${p.language}">${p.code}</code></pre>`;
+      return `${pad}<pre${attrs}><code class="language-${p.language}">${p.code}</code></pre>`;
     }
     case 'divider': {
       const p = block.props as import('../types').DividerProps;
       const cls = p.style === 'dots' ? 'divider-dots' : p.style === 'double' ? 'divider-double' : '';
-      return `<hr class="${[cls, className].filter(Boolean).join(' ')}"${styleStr ? ` style="${styleStr}"` : ''} />`;
+      const classes = [cls, className].filter(Boolean).join(' ');
+      return `${pad}<hr class="${classes}"${styleStr ? ` style="${styleStr}"` : ''} />`;
     }
     case 'pagebreak':
-      return `<div class="page-break ${className}"></div>`;
+      return `${pad}<div class="page-break ${className}"></div>`;
     case 'cover': {
       const p = block.props as import('../types').CoverProps;
-      return `<div class="cover ${className}"${styleStr ? ` style="${styleStr}"` : ''}><h1>${p.title}</h1>${p.subtitle ? `<p>${p.subtitle}</p>` : ''}${p.author ? `<p class="author">${p.author}</p>` : ''}${p.date ? `<p class="date">${p.date}</p>` : ''}</div>`;
+      const innerPad = pad + '  ';
+      let html = `${pad}<div class="cover ${className}"${styleStr ? ` style="${styleStr}"` : ''}>\n`;
+      html += `${innerPad}<h1>${p.title}</h1>\n`;
+      if (p.subtitle) html += `${innerPad}<p>${p.subtitle}</p>\n`;
+      if (p.author) html += `${innerPad}<p class="author">${p.author}</p>\n`;
+      if (p.date) html += `${innerPad}<p class="date">${p.date}</p>\n`;
+      html += `${pad}</div>`;
+      return html;
     }
     case 'html': {
       const p = block.props as import('../types').HtmlProps;
-      return p.html;
+      const lines = p.html.split('\n');
+      return lines.map(l => `${pad}${l}`).join('\n');
     }
     case 'columns': {
       const p = block.props as import('../types').ColumnsProps;
       const colBlocks = block.children || [];
-      const cols = Array.from({ length: p.count }, (_, i) => {
-        const colContent = colBlocks[i] ? blockToHtml(colBlocks[i]) : '';
-        return `<div class="column">${colContent}</div>`;
-      }).join('');
-      return `<div class="columns columns-${p.count} ${className}"${styleStr ? ` style="${styleStr}"` : ''}>${cols}</div>`;
+      const innerPad = pad + '  ';
+      let html = `${pad}<div class="columns columns-${p.count} ${className}"${styleStr ? ` style="${styleStr}"` : ''}>\n`;
+      for (let i = 0; i < p.count; i++) {
+        html += `${innerPad}<div class="column">\n`;
+        if (colBlocks[i]) {
+          html += blockToHtml(colBlocks[i], indent + 2) + '\n';
+        }
+        html += `${innerPad}</div>\n`;
+      }
+      html += `${pad}</div>`;
+      return html;
+    }
+    case 'spacer': {
+      const p = block.props as import('../types').SpacerProps;
+      return `${pad}<br data-height="${p.height}" class="spacer ${className}"${styleStr ? ` style="${styleStr}"` : ''} />`;
+    }
+    case 'wrapper': {
+      const p = block.props as import('../types').WrapperProps;
+      const colBlocks = block.children || [];
+      const childrenHtml = colBlocks.map((child: Block) => blockToHtml(child, indent + 1)).join('\n');
+      return `${pad}<${p.tag} class="wrapper ${className}"${styleStr ? ` style="${styleStr}"` : ''}>\n${childrenHtml}\n${pad}</${p.tag}>`;
+    }
+    case 'pageDivider': {
+      const p = block.props as import('../types').PageDividerProps;
+      const variantClass = p.variant === 'gradient' ? 'page-divider-gradient' : '';
+      let styleAddon = '';
+      if (p.variant !== 'gradient') {
+        const borderStyle = p.variant === 'dashed' ? 'dashed' : p.variant === 'dotted' ? 'dotted' : p.variant === 'double' ? 'double' : 'solid';
+        styleAddon = ` style="border-top: ${p.thickness || '2px'} ${borderStyle} ${p.color || '#94a3b8'}; margin: ${p.spacing || '16px'} 0;"`;
+      } else {
+        styleAddon = ` style="background: linear-gradient(to right, transparent, ${p.color || '#94a3b8'}, transparent); height: ${p.thickness || '2px'}; margin: ${p.spacing || '16px'} 0;"`;
+      }
+      return `${pad}<hr data-variant="${p.variant}" data-thickness="${p.thickness}" data-spacing="${p.spacing}" class="page-divider ${variantClass} ${className}"${styleAddon} />`;
     }
     default:
       return '';
@@ -631,4 +790,123 @@ function parseInlineStyle(styleStr: string): BlockStyle {
     }
   }
   return style;
+}
+
+function parseElementToBlock(el: Element): Block | null {
+  const tag = el.tagName.toLowerCase();
+  let block: Block | null = null;
+
+  if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4') {
+    block = createBlock('heading');
+    (block.props as HeadingProps).level = parseInt(tag[1]) as 1 | 2 | 3 | 4;
+    (block.props as HeadingProps).text = el.textContent || '';
+  } else if (tag === 'p') {
+    block = createBlock('paragraph');
+    (block.props as ParagraphProps).text = el.textContent || '';
+    (block.props as ParagraphProps).html = el.innerHTML || undefined;
+  } else if (tag === 'figure') {
+    const img = el.querySelector('img');
+    if (img) {
+      block = createBlock('image');
+      (block.props as ImageProps).src = img.getAttribute('src') || '';
+      (block.props as ImageProps).alt = img.getAttribute('alt') || '';
+      const figcaption = el.querySelector('figcaption');
+      if (figcaption) (block.props as ImageProps).caption = figcaption.textContent || '';
+    }
+  } else if (tag === 'table') {
+    block = createBlock('table');
+    const rows: string[][] = [];
+    let headerRows = 0;
+    for (const tr of Array.from(el.querySelectorAll('tr'))) {
+      const cells = Array.from(tr.querySelectorAll('th, td')).map(cell => cell.textContent || '');
+      rows.push(cells);
+      if (tr.querySelector('th')) headerRows++;
+    }
+    (block.props as TableProps).rows = rows.length ? rows : [['']];
+    (block.props as TableProps).headerRows = headerRows || 1;
+  } else if (tag === 'ul' || tag === 'ol') {
+    block = createBlock('list');
+    (block.props as ListProps).type = tag === 'ol' ? 'ordered' : 'unordered';
+    (block.props as ListProps).items = Array.from(el.querySelectorAll('li')).map(li => ({
+      id: generateId(),
+      text: li.textContent || '',
+    }));
+  } else if (tag === 'pre') {
+    const codeEl = el.querySelector('code');
+    block = createBlock('code');
+    (block.props as CodeProps).code = codeEl ? (codeEl.textContent || '') : (el.textContent || '');
+    const langClass = codeEl?.className.match(/language-(\w+)/);
+    if (langClass) (block.props as CodeProps).language = langClass[1];
+  } else if (tag === 'hr') {
+    block = createBlock('divider');
+    if (el.classList.contains('divider-dots')) (block.props as DividerProps).style = 'dots';
+    else if (el.classList.contains('divider-double')) (block.props as DividerProps).style = 'double';
+  } else if (tag === 'div' && el.classList.contains('cover')) {
+    block = createBlock('cover');
+    const h1 = el.querySelector('h1');
+    if (h1) (block.props as CoverProps).title = h1.textContent || '';
+    const authorEl = el.querySelector('.author');
+    if (authorEl) (block.props as CoverProps).author = authorEl.textContent || '';
+    const dateEl = el.querySelector('.date');
+    if (dateEl) (block.props as CoverProps).date = dateEl.textContent || '';
+    const subtitleP = el.querySelector('p:not(.author):not(.date)');
+    if (subtitleP && h1 && subtitleP !== h1) (block.props as CoverProps).subtitle = subtitleP.textContent || '';
+  } else if (tag === 'div' && el.classList.contains('page-break')) {
+    block = createBlock('pagebreak');
+  } else if (tag === 'div' && el.classList.contains('callout')) {
+    block = createBlock('callout');
+    const p = el.querySelector('p');
+    if (p) (block.props as CalloutProps).text = p.textContent || '';
+    if (el.classList.contains('callout-warning')) (block.props as CalloutProps).variant = 'warning';
+    else if (el.classList.contains('callout-error')) (block.props as CalloutProps).variant = 'error';
+    else if (el.classList.contains('callout-success')) (block.props as CalloutProps).variant = 'success';
+    else (block.props as CalloutProps).variant = 'info';
+  } else if (tag === 'div' && el.classList.contains('columns')) {
+    block = createBlock('columns');
+    const cols = el.querySelectorAll('.column');
+    const colBlocks: Block[] = [];
+    for (const col of Array.from(cols)) {
+      if (col.firstElementChild) {
+        const innerHtml = col.firstElementChild.outerHTML;
+        const colBlock = createBlock('paragraph');
+        (colBlock.props as ParagraphProps).html = innerHtml;
+        (colBlock.props as ParagraphProps).text = col.textContent || '';
+        colBlocks.push(colBlock);
+      }
+    }
+    (block.props as ColumnsProps).count = colBlocks.length || 2;
+    block.children = colBlocks.length ? colBlocks : [createBlock('paragraph'), createBlock('paragraph')];
+  } else if (tag === 'br' || (tag === 'div' && el.classList.contains('spacer'))) {
+    block = createBlock('spacer');
+    const height = el.getAttribute('data-height') || '32';
+    (block.props as SpacerProps).height = height;
+  } else if ((tag === 'div' || tag === 'section' || tag === 'article' || tag === 'aside') && el.classList.contains('wrapper')) {
+    block = createBlock('wrapper');
+    (block.props as WrapperProps).tag = tag as 'div' | 'section' | 'article' | 'aside';
+    const children: Block[] = [];
+    for (const child of Array.from(el.children)) {
+      const childBlock = parseElementToBlock(child);
+      if (childBlock) children.push(childBlock);
+    }
+    block.children = children;
+  } else if (tag === 'hr' && el.classList.contains('page-divider')) {
+    block = createBlock('pageDivider');
+    const variant = el.getAttribute('data-variant') || 'solid';
+    const thickness = el.getAttribute('data-thickness') || '2px';
+    const spacing = el.getAttribute('data-spacing') || '16px';
+    (block.props as PageDividerProps).variant = variant as 'solid' | 'dashed' | 'dotted' | 'double' | 'gradient';
+    (block.props as PageDividerProps).thickness = thickness;
+    (block.props as PageDividerProps).spacing = spacing;
+  } else {
+    block = createBlock('html');
+    (block.props as HtmlProps).html = el.outerHTML;
+  }
+
+  // Parse inline styles
+  const styleAttr = el.getAttribute('style');
+  if (styleAttr && block) {
+    block.style = parseInlineStyle(styleAttr);
+  }
+
+  return block;
 }
