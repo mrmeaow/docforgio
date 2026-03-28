@@ -1,0 +1,12 @@
+# netlify.toml
+
+[build]
+  # Use pnpm since your packageManager is pnpm@10.15.0
+  command = "pnpm run build"
+  publish = "dist"
+
+# SPA fallback: rewrite all routes to index.html so client-side routing works
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
